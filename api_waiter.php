@@ -9,7 +9,6 @@ $action = isset($_REQUEST['action']) ? trim((string)$_REQUEST['action']) : '';
 
 try {
     $conn = getDbConnection();
-    ensureServeLogTable($conn);
 
     if ($action === 'list_pending') {
         $sql = "
@@ -26,13 +25,10 @@ try {
                 o.ParentProcessID,
                 o.SubmitOrderDateTime,
                 o.FinishDateTime,
-                CASE WHEN sl.ProcessID IS NOT NULL THEN 1 ELSE 0 END AS ServeStatus
+                o.ServingStaffID,
+                o.ServingDateTime,
+                CASE WHEN o.ServingStaffID != 0 THEN 1 ELSE 0 END AS ServeStatus
             FROM orderprocessdetailfront o
-            LEFT JOIN kds_serve_log sl
-                ON sl.ProductLevelID = o.ProductLevelID
-               AND sl.ProcessID      = o.ProcessID
-               AND sl.SubProcessID   = o.SubProcessID
-               AND sl.PrinterID      = o.PrinterID
             WHERE o.ProcessStatus = 1
               AND DATE(o.FinishDateTime) = CURDATE()
             ORDER BY o.FinishDateTime ASC
@@ -55,12 +51,12 @@ try {
         $staff = (int)($_POST['StaffID']         ?? 0);
 
         $stmt = $conn->prepare("
-            INSERT INTO kds_serve_log
-                (ProductLevelID, ProcessID, SubProcessID, PrinterID, ServedDateTime, ServedStaffID)
-            VALUES (?, ?, ?, ?, NOW(), ?)
-            ON DUPLICATE KEY UPDATE ServedDateTime = NOW(), ServedStaffID = ?
+            UPDATE orderprocessdetailfront
+            SET ServingStaffID = ?, ServingDateTime = UNIX_TIMESTAMP()
+            WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ?
+              AND ProcessStatus = 1
         ");
-        $stmt->bind_param('iiiiii', $plid, $pid, $spid, $prid, $staff, $staff);
+        $stmt->bind_param('iiiii', $staff, $plid, $pid, $spid, $prid);
         if (!$stmt->execute()) throw new Exception($stmt->error);
         $stmt->close();
         $conn->close();
@@ -73,8 +69,10 @@ try {
         $prid = (int)($_POST['PrinterID']       ?? 0);
 
         $stmt = $conn->prepare("
-            DELETE FROM kds_serve_log
+            UPDATE orderprocessdetailfront
+            SET ServingStaffID = 0, ServingDateTime = 0
             WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ?
+              AND ProcessStatus = 1
         ");
         $stmt->bind_param('iiii', $plid, $pid, $spid, $prid);
         if (!$stmt->execute()) throw new Exception($stmt->error);
@@ -87,14 +85,12 @@ try {
         $staff   = (int)($_POST['StaffID'] ?? 0);
 
         $stmt = $conn->prepare("
-            INSERT INTO kds_serve_log
-                (ProductLevelID, ProcessID, SubProcessID, PrinterID, ServedDateTime, ServedStaffID)
-            SELECT ProductLevelID, ProcessID, SubProcessID, PrinterID, NOW(), ?
-            FROM orderprocessdetailfront
+            UPDATE orderprocessdetailfront
+            SET ServingStaffID = ?, ServingDateTime = UNIX_TIMESTAMP()
             WHERE TableID = ? AND ProcessStatus = 1 AND DATE(FinishDateTime) = CURDATE()
-            ON DUPLICATE KEY UPDATE ServedDateTime = NOW(), ServedStaffID = ?
+              AND ServingStaffID = 0
         ");
-        $stmt->bind_param('iii', $staff, $tableId, $staff);
+        $stmt->bind_param('ii', $staff, $tableId);
         if (!$stmt->execute()) throw new Exception($stmt->error);
         $stmt->close();
         $conn->close();
@@ -107,19 +103,4 @@ try {
 
 } catch (Exception $e) {
     jsonResponse(['success' => false, 'message' => $e->getMessage()], 500);
-}
-
-function ensureServeLogTable(mysqli $conn): void
-{
-    $conn->query("
-        CREATE TABLE IF NOT EXISTS kds_serve_log (
-            ProductLevelID  INT         NOT NULL DEFAULT 0,
-            ProcessID       INT         NOT NULL,
-            SubProcessID    INT         NOT NULL DEFAULT 0,
-            PrinterID       INT         NOT NULL DEFAULT 0,
-            ServedDateTime  DATETIME    NOT NULL,
-            ServedStaffID   INT         NOT NULL DEFAULT 0,
-            PRIMARY KEY (ProductLevelID, ProcessID, SubProcessID, PrinterID)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8
-    ");
 }
