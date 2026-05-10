@@ -50,21 +50,16 @@ try {
         $spid  = (int)($_POST['SubProcessID']   ?? 0);
         $prid  = (int)($_POST['PrinterID']      ?? 0);
         $staff = (int)($_POST['StaffID']        ?? 0);
-        $tbl   = (int)($_POST['TableID']        ?? 0);
 
-        // อัปเดตแถวหลัก + ลูกเซตทั้งหมด (ParentProcessID = ProcessID)
         $stmt = $conn->prepare("
             UPDATE orderprocessdetailfront
             SET ServingStaffID = ?, ServingDateTime = NOW()
-            WHERE ProcessStatus = 1
+            WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ?
+              AND ProcessStatus = 1
               AND FinishDateTime >= CURDATE()
               AND FinishDateTime <  CURDATE() + INTERVAL 1 DAY
-              AND (
-                (ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ?)
-                OR (ParentProcessID = ? AND TableID = ?)
-              )
         ");
-        $stmt->bind_param('iiiiiii', $staff, $plid, $pid, $spid, $prid, $pid, $tbl);
+        $stmt->bind_param('iiiii', $staff, $plid, $pid, $spid, $prid);
         if (!$stmt->execute()) throw new Exception($stmt->error);
         $stmt->close();
         $conn->close();
@@ -75,19 +70,14 @@ try {
         $pid  = (int)($_POST['ProcessID']      ?? 0);
         $spid = (int)($_POST['SubProcessID']   ?? 0);
         $prid = (int)($_POST['PrinterID']      ?? 0);
-        $tbl  = (int)($_POST['TableID']        ?? 0);
 
-        // ยกเลิกแถวหลัก + ลูกเซตทั้งหมด
         $stmt = $conn->prepare("
             UPDATE orderprocessdetailfront
             SET ServingStaffID = 0, ServingDateTime = NULL
-            WHERE ProcessStatus = 1
-              AND (
-                (ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ?)
-                OR (ParentProcessID = ? AND TableID = ?)
-              )
+            WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ?
+              AND ProcessStatus = 1
         ");
-        $stmt->bind_param('iiiiii', $plid, $pid, $spid, $prid, $pid, $tbl);
+        $stmt->bind_param('iiii', $plid, $pid, $spid, $prid);
         if (!$stmt->execute()) throw new Exception($stmt->error);
         $stmt->close();
         $conn->close();

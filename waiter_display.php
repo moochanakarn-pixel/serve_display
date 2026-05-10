@@ -532,31 +532,18 @@ function buildCard(t, allowUnserve = false) {
    ACTIONS — POST ไปที่ api_waiter.php
 ============================================================ */
 async function tapItem(key) {
-  // หา root ของเซต (ถ้าเป็นลูก → ใช้พ่อ, ถ้าเป็นพ่อ → ใช้ตัวเอง)
   const r = rawRows.find(r => rowKey(r) === key);
   if (!r) return;
 
-  const rootPid  = r.ParentProcessID > 0 ? r.ParentProcessID : r.ProcessID;
-  const rootItem = r.ParentProcessID > 0
-    ? (rawRows.find(p => p.ProcessID == rootPid && p.TableID == r.TableID) || r)
-    : r;
-  const apiKey   = rowKey(rootItem);
+  if (pending.has(key)) return;
+  pending.add(key);
 
-  if (pending.has(apiKey)) return;
-  pending.add(apiKey);
-
-  // items ทั้งเซต (พ่อ + ลูกทุกตัว)
-  const setItems = rawRows.filter(x =>
-    x.TableID == r.TableID &&
-    (x.ProcessID == rootPid || x.ParentProcessID == rootPid)
-  );
-
-  const wasServed = rootItem.ServeStatus == 1;
+  const wasServed = r.ServeStatus == 1;
   const action    = wasServed ? 'unserve_item' : 'serve_item';
   const newStatus = wasServed ? 0 : 1;
 
-  // Optimistic — อัปเดตทั้งเซต
-  setItems.forEach(x => x.ServeStatus = newStatus);
+  // Optimistic — อัปเดตเฉพาะรายการที่คลิก
+  r.ServeStatus = newStatus;
   tables = groupByTable(rawRows);
   render();
   toast(wasServed ? '↩️ ยกเลิกติ๊ก' : '✅ ติ๊กเสิร์ฟแล้ว');
@@ -564,22 +551,22 @@ async function tapItem(key) {
   try {
     const fd = new FormData();
     fd.append('action',         action);
-    fd.append('ProductLevelID', rootItem.ProductLevelID);
-    fd.append('ProcessID',      rootItem.ProcessID);
-    fd.append('SubProcessID',   rootItem.SubProcessID);
-    fd.append('PrinterID',      rootItem.PrinterID);
-    fd.append('TableID',        rootItem.TableID);
+    fd.append('ProductLevelID', r.ProductLevelID);
+    fd.append('ProcessID',      r.ProcessID);
+    fd.append('SubProcessID',   r.SubProcessID);
+    fd.append('PrinterID',      r.PrinterID);
+    fd.append('TableID',        r.TableID);
     fd.append('StaffID',        STAFF_ID);
     const res  = await fetch(API, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
     const json = await res.json();
     if (!json.success) throw new Error(json.message);
   } catch (e) {
-    setItems.forEach(x => x.ServeStatus = wasServed ? 1 : 0);
+    r.ServeStatus = wasServed ? 1 : 0;
     tables = groupByTable(rawRows);
     render();
     toast('⚠️ บันทึกไม่สำเร็จ', true);
   } finally {
-    pending.delete(apiKey);
+    pending.delete(key);
   }
 }
 
