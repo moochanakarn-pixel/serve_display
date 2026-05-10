@@ -141,6 +141,8 @@ body{
 .irow:last-child{border-bottom:none}
 .irow:active{background:var(--surface-soft)}
 .irow.served{opacity:.4}
+.irow.locked{cursor:default}
+.irow.locked:active{background:transparent}
 
 .chk{
     width:28px;height:28px;flex-shrink:0;border-radius:8px;
@@ -324,8 +326,7 @@ body{
 
 <!-- FILTER -->
 <div class="fbar">
-  <button class="fbtn on" id="fb-all"  onclick="setFilter('all')">ทั้งหมด <span class="cnt" id="fc-all">-</span></button>
-  <button class="fbtn"    id="fb-wait" onclick="setFilter('wait')">⏳ รอเสิร์ฟ <span class="cnt" id="fc-wait">-</span></button>
+  <button class="fbtn on" id="fb-wait" onclick="setFilter('wait')">⏳ รอเสิร์ฟ <span class="cnt" id="fc-wait">-</span></button>
   <button class="fbtn"    id="fb-done" onclick="setFilter('done')">✅ เสิร์ฟแล้ว <span class="cnt" id="fc-done">-</span></button>
 </div>
 
@@ -348,7 +349,7 @@ let   STAFF_ID    = 0;
 /* ── state ── */
 let tables   = [];
 let rawRows  = [];
-let filter   = 'all';
+let filter   = 'wait';
 let timer    = null;
 const pending = new Set(); // rowKey ที่กำลัง POST อยู่
 
@@ -421,39 +422,30 @@ function render() {
   document.getElementById('sn-items').textContent = nItems;
   document.getElementById('sn-done').textContent  = nDone;
 
-  const nAll  = tables.length;
-  const nW    = tables.filter(t => t.rows.some(r  => r.ServeStatus == 0)).length;
-  const nD    = tables.filter(t => t.rows.every(r => r.ServeStatus == 1)).length;
-  document.getElementById('fc-all').textContent  = nAll;
+  const nW = tables.filter(t => t.rows.some(r  => r.ServeStatus == 0)).length;
+  const nD = tables.filter(t => t.rows.every(r => r.ServeStatus == 1)).length;
   document.getElementById('fc-wait').textContent = nW;
   document.getElementById('fc-done').textContent = nD;
 
   // filter
-  let shown = tables;
-  if (filter === 'wait') shown = tables.filter(t => t.rows.some(r  => r.ServeStatus == 0));
+  let shown = tables.filter(t => t.rows.some(r => r.ServeStatus == 0));
   if (filter === 'done') shown = tables.filter(t => t.rows.every(r => r.ServeStatus == 1));
 
   const el = document.getElementById('main');
   if (!shown.length) {
-    el.innerHTML = `<div class="empty">
-      <div class="ico">${filter === 'done' ? '🎉' : '🍳'}</div>
-      <h3>${filter === 'done' ? 'ยังไม่มีโต๊ะที่เสิร์ฟครบ' : 'ไม่มีรายการในหมวดนี้'}</h3>
-      <p>${filter === 'wait' ? 'ทุกโต๊ะเสิร์ฟครบแล้ว 👍' : ''}</p>
-    </div>`;
+    const emptyMsg = filter === 'done'
+      ? { ico: '📋', h: 'ยังไม่มีโต๊ะที่เสิร์ฟครบ', p: '' }
+      : { ico: '🎉', h: 'เสิร์ฟครบทุกโต๊ะแล้ว!', p: 'ไม่มีรายการค้าง 👍' };
+    el.innerHTML = `<div class="empty"><div class="ico">${emptyMsg.ico}</div><h3>${emptyMsg.h}</h3><p>${emptyMsg.p}</p></div>`;
     return;
   }
-
-  const pend = shown.filter(t => t.rows.some(r  => r.ServeStatus == 0));
-  const done = shown.filter(t => t.rows.every(r => r.ServeStatus == 1));
-
   let html = '';
-  if (pend.length) { html += `<div class="sec-lbl">⏳ รอเสิร์ฟ · ${pend.length} โต๊ะ</div>`; pend.forEach(t => html += buildCard(t)); }
-  if (done.length) { html += `<div class="sec-lbl">✅ เสิร์ฟแล้ว · ${done.length} โต๊ะ</div>`; done.forEach(t => html += buildCard(t)); }
+  shown.forEach(t => html += buildCard(t, filter === 'done'));
   el.innerHTML = html;
 }
 
 /* ── build card HTML ── */
-function buildCard(t) {
+function buildCard(t, allowUnserve = false) {
   const total   = t.rows.length;
   const served  = t.rows.filter(r => r.ServeStatus == 1).length;
   const allDone = served === total;
@@ -477,7 +469,11 @@ function buildCard(t) {
     else if (r.ProductSetType <   0) tag = `<span class="tag sub">↳ ในเซต</span>`;
     else if (r.ProductSetType == 15) tag = `<span class="tag add">➕ Add-on</span>`;
 
-    return `<div class="irow${srv ? ' served' : ''}" data-key="${key}" onclick="tapItem('${key}')">
+    const tappable = !srv || allowUnserve;
+    const onclick  = tappable
+      ? (srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`)
+      : '';
+    return `<div class="irow${srv ? ' served' : ''}${!tappable ? ' locked' : ''}" data-key="${key}" ${onclick}>
       <div class="chk">
         <svg class="chk-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
@@ -594,10 +590,16 @@ async function tapServeAll(tableId) {
 /* ── filter ── */
 function setFilter(f) {
   filter = f;
-  ['all', 'wait', 'done'].forEach(x =>
+  ['wait', 'done'].forEach(x =>
     document.getElementById('fb-' + x).classList.toggle('on', x === f)
   );
   render();
+}
+
+/* ── confirm before unserve ── */
+async function confirmUnserve(key) {
+  if (!confirm('ยกเลิกการเสิร์ฟรายการนี้?')) return;
+  await tapItem(key);
 }
 
 /* ============================================================
