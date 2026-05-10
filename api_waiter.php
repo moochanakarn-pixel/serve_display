@@ -9,6 +9,7 @@ $action = isset($_REQUEST['action']) ? trim((string)$_REQUEST['action']) : '';
 
 try {
     $conn = getDbConnection();
+    ensureServeLogTable($conn);
 
     if ($action === 'list_pending') {
         $sql = "
@@ -25,10 +26,16 @@ try {
                 o.ParentProcessID,
                 o.SubmitOrderDateTime,
                 o.FinishDateTime,
-                0 AS ServeStatus
+                CASE WHEN sl.ProcessID IS NOT NULL THEN 1 ELSE 0 END AS ServeStatus
             FROM orderprocessdetailfront o
+            LEFT JOIN kds_serve_log sl
+                ON sl.ProductLevelID = o.ProductLevelID
+               AND sl.ProcessID      = o.ProcessID
+               AND sl.SubProcessID   = o.SubProcessID
+               AND sl.PrinterID      = o.PrinterID
             WHERE o.ProcessStatus = 1
-            ORDER BY o.SubmitOrderDateTime ASC
+              AND DATE(o.FinishDateTime) = CURDATE()
+            ORDER BY o.FinishDateTime ASC
         ";
         $result = $conn->query($sql);
         if (!$result) throw new Exception($conn->error);
@@ -40,10 +47,58 @@ try {
         $conn->close();
         jsonResponse(['success' => true, 'rows' => $rows]);
 
-    } elseif ($action === 'serve_item' || $action === 'unserve_item' || $action === 'serve_table') {
-        // ยังไม่ได้เพิ่ม ServeStatus ใน DB — return success เพื่อให้ UI ทำงานได้ก่อน
+    } elseif ($action === 'serve_item') {
+        $plid  = (int)($_POST['ProductLevelID'] ?? 0);
+        $pid   = (int)($_POST['ProcessID']      ?? 0);
+        $spid  = (int)($_POST['SubProcessID']   ?? 0);
+        $prid  = (int)($_POST['PrinterID']       ?? 0);
+        $staff = (int)($_POST['StaffID']         ?? 0);
+
+        $stmt = $conn->prepare("
+            INSERT INTO kds_serve_log
+                (ProductLevelID, ProcessID, SubProcessID, PrinterID, ServedDateTime, ServedStaffID)
+            VALUES (?, ?, ?, ?, NOW(), ?)
+            ON DUPLICATE KEY UPDATE ServedDateTime = NOW(), ServedStaffID = ?
+        ");
+        $stmt->bind_param('iiiiii', $plid, $pid, $spid, $prid, $staff, $staff);
+        if (!$stmt->execute()) throw new Exception($stmt->error);
+        $stmt->close();
         $conn->close();
-        jsonResponse(['success' => true, 'message' => 'ok']);
+        jsonResponse(['success' => true]);
+
+    } elseif ($action === 'unserve_item') {
+        $plid = (int)($_POST['ProductLevelID'] ?? 0);
+        $pid  = (int)($_POST['ProcessID']      ?? 0);
+        $spid = (int)($_POST['SubProcessID']   ?? 0);
+        $prid = (int)($_POST['PrinterID']       ?? 0);
+
+        $stmt = $conn->prepare("
+            DELETE FROM kds_serve_log
+            WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ?
+        ");
+        $stmt->bind_param('iiii', $plid, $pid, $spid, $prid);
+        if (!$stmt->execute()) throw new Exception($stmt->error);
+        $stmt->close();
+        $conn->close();
+        jsonResponse(['success' => true]);
+
+    } elseif ($action === 'serve_table') {
+        $tableId = (int)($_POST['TableID'] ?? 0);
+        $staff   = (int)($_POST['StaffID'] ?? 0);
+
+        $stmt = $conn->prepare("
+            INSERT INTO kds_serve_log
+                (ProductLevelID, ProcessID, SubProcessID, PrinterID, ServedDateTime, ServedStaffID)
+            SELECT ProductLevelID, ProcessID, SubProcessID, PrinterID, NOW(), ?
+            FROM orderprocessdetailfront
+            WHERE TableID = ? AND ProcessStatus = 1 AND DATE(FinishDateTime) = CURDATE()
+            ON DUPLICATE KEY UPDATE ServedDateTime = NOW(), ServedStaffID = ?
+        ");
+        $stmt->bind_param('iii', $staff, $tableId, $staff);
+        if (!$stmt->execute()) throw new Exception($stmt->error);
+        $stmt->close();
+        $conn->close();
+        jsonResponse(['success' => true]);
 
     } else {
         $conn->close();
@@ -52,4 +107,19 @@ try {
 
 } catch (Exception $e) {
     jsonResponse(['success' => false, 'message' => $e->getMessage()], 500);
+}
+
+function ensureServeLogTable(mysqli $conn): void
+{
+    $conn->query("
+        CREATE TABLE IF NOT EXISTS kds_serve_log (
+            ProductLevelID  INT         NOT NULL DEFAULT 0,
+            ProcessID       INT         NOT NULL,
+            SubProcessID    INT         NOT NULL DEFAULT 0,
+            PrinterID       INT         NOT NULL DEFAULT 0,
+            ServedDateTime  DATETIME    NOT NULL,
+            ServedStaffID   INT         NOT NULL DEFAULT 0,
+            PRIMARY KEY (ProductLevelID, ProcessID, SubProcessID, PrinterID)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+    ");
 }
