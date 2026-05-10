@@ -191,6 +191,7 @@ body{
 }
 .srv-btn:active{transform:scale(.98);box-shadow:none}
 .srv-btn.done-btn{background:var(--line);color:var(--muted);box-shadow:none;cursor:default}
+.srv-btn.unserve-btn{background:linear-gradient(135deg,var(--warning),#b45309);box-shadow:0 4px 12px rgba(217,119,6,.25)}
 .srv-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
 /* EMPTY */
@@ -485,12 +486,17 @@ function buildCard(t, allowUnserve = false) {
     </div>`;
   }).join('');
 
-  const btn = allDone
-    ? `<button class="srv-btn done-btn" disabled>✅ เสิร์ฟครบแล้ว</button>`
-    : `<button class="srv-btn" onclick="tapServeAll(${t.tableId})">
+  let btn;
+  if (allDone) {
+    btn = allowUnserve
+      ? `<button class="srv-btn unserve-btn" onclick="tapUnserveAll(${t.tableId},'${esc(t.tableName)}')">↩️ ยกเลิกเสิร์ฟทั้งโต๊ะ ${esc(t.tableName)}</button>`
+      : `<button class="srv-btn done-btn" disabled>✅ เสิร์ฟครบแล้ว</button>`;
+  } else {
+    btn = `<button class="srv-btn" onclick="tapServeAll(${t.tableId})">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        เสิร์ฟครบโต๊ะ ${t.tableName}
+        เสิร์ฟครบโต๊ะ ${esc(t.tableName)}
       </button>`;
+  }
 
   return `<div class="card ${cls}">
     <div class="c-hdr">
@@ -518,47 +524,54 @@ function buildCard(t, allowUnserve = false) {
    ACTIONS — POST ไปที่ api_waiter.php
 ============================================================ */
 async function tapItem(key) {
-  if (pending.has(key)) return;
+  // หา root ของเซต (ถ้าเป็นลูก → ใช้พ่อ, ถ้าเป็นพ่อ → ใช้ตัวเอง)
   const r = rawRows.find(r => rowKey(r) === key);
   if (!r) return;
 
-  const wasServed = r.ServeStatus == 1;
-  const action    = wasServed ? 'unserve_item' : 'serve_item';
-  pending.add(key);
+  const rootPid  = r.ParentProcessID > 0 ? r.ParentProcessID : r.ProcessID;
+  const rootItem = r.ParentProcessID > 0
+    ? (rawRows.find(p => p.ProcessID == rootPid && p.TableID == r.TableID) || r)
+    : r;
+  const apiKey   = rowKey(rootItem);
 
-  // Optimistic UI update
-  r.ServeStatus = wasServed ? 0 : 1;
-  if (!wasServed) {
-    // ถ้า toggle parent set → toggle ลูกในเซตด้วย
-    if (r.ProductSetType == 7) {
-      rawRows.filter(c => c.ParentProcessID == r.ProcessID && c.TableID == r.TableID)
-             .forEach(c => c.ServeStatus = 1);
-    }
-  }
+  if (pending.has(apiKey)) return;
+  pending.add(apiKey);
+
+  // items ทั้งเซต (พ่อ + ลูกทุกตัว)
+  const setItems = rawRows.filter(x =>
+    x.TableID == r.TableID &&
+    (x.ProcessID == rootPid || x.ParentProcessID == rootPid)
+  );
+
+  const wasServed = rootItem.ServeStatus == 1;
+  const action    = wasServed ? 'unserve_item' : 'serve_item';
+  const newStatus = wasServed ? 0 : 1;
+
+  // Optimistic — อัปเดตทั้งเซต
+  setItems.forEach(x => x.ServeStatus = newStatus);
   tables = groupByTable(rawRows);
   render();
   toast(wasServed ? '↩️ ยกเลิกติ๊ก' : '✅ ติ๊กเสิร์ฟแล้ว');
 
-  // POST to API
   try {
     const fd = new FormData();
     fd.append('action',         action);
-    fd.append('ProductLevelID', r.ProductLevelID);
-    fd.append('ProcessID',      r.ProcessID);
-    fd.append('SubProcessID',   r.SubProcessID);
-    fd.append('PrinterID',      r.PrinterID);
+    fd.append('ProductLevelID', rootItem.ProductLevelID);
+    fd.append('ProcessID',      rootItem.ProcessID);
+    fd.append('SubProcessID',   rootItem.SubProcessID);
+    fd.append('PrinterID',      rootItem.PrinterID);
+    fd.append('TableID',        rootItem.TableID);
     fd.append('StaffID',        STAFF_ID);
     const res  = await fetch(API, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
     const json = await res.json();
     if (!json.success) throw new Error(json.message);
   } catch (e) {
-    // Rollback
-    r.ServeStatus = wasServed ? 1 : 0;
+    setItems.forEach(x => x.ServeStatus = wasServed ? 1 : 0);
     tables = groupByTable(rawRows);
     render();
     toast('⚠️ บันทึกไม่สำเร็จ', true);
   } finally {
-    pending.delete(key);
+    pending.delete(apiKey);
   }
 }
 
@@ -600,6 +613,30 @@ function setFilter(f) {
 async function confirmUnserve(key) {
   if (!confirm('ยกเลิกการเสิร์ฟรายการนี้?')) return;
   await tapItem(key);
+}
+
+async function tapUnserveAll(tableId, tableName) {
+  if (!confirm(`ยกเลิกเสิร์ฟทั้งโต๊ะ ${tableName}?`)) return;
+  const t = tables.find(t => t.tableId == tableId);
+  if (!t) return;
+
+  t.rows.forEach(r => r.ServeStatus = 0);
+  tables = groupByTable(rawRows);
+  render();
+
+  try {
+    const fd = new FormData();
+    fd.append('action',  'unserve_table');
+    fd.append('TableID', tableId);
+    fd.append('StaffID', STAFF_ID);
+    const res  = await fetch(API, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message);
+    toast(`↩️ ยกเลิกเสิร์ฟโต๊ะ ${tableName} แล้ว`);
+  } catch (e) {
+    await loadData();
+    toast('⚠️ บันทึกไม่สำเร็จ', true);
+  }
 }
 
 /* ============================================================
