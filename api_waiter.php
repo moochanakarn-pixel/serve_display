@@ -52,7 +52,7 @@ try {
 
         $stmt = $conn->prepare("
             UPDATE orderprocessdetailfront
-            SET ServingStaffID = ?, ServingDateTime = UNIX_TIMESTAMP()
+            SET ServingStaffID = ?, ServingDateTime = NOW()
             WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ?
               AND ProcessStatus = 1
         ");
@@ -70,7 +70,7 @@ try {
 
         $stmt = $conn->prepare("
             UPDATE orderprocessdetailfront
-            SET ServingStaffID = 0, ServingDateTime = 0
+            SET ServingStaffID = 0, ServingDateTime = NULL
             WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ?
               AND ProcessStatus = 1
         ");
@@ -86,7 +86,7 @@ try {
 
         $stmt = $conn->prepare("
             UPDATE orderprocessdetailfront
-            SET ServingStaffID = ?, ServingDateTime = UNIX_TIMESTAMP()
+            SET ServingStaffID = ?, ServingDateTime = NOW()
             WHERE TableID = ? AND ProcessStatus = 1 AND DATE(FinishDateTime) = CURDATE()
               AND ServingStaffID = 0
         ");
