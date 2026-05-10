@@ -30,7 +30,8 @@ try {
                 CASE WHEN o.ServingDateTime IS NOT NULL THEN 1 ELSE 0 END AS ServeStatus
             FROM orderprocessdetailfront o
             WHERE o.ProcessStatus = 1
-              AND DATE(o.FinishDateTime) = CURDATE()
+              AND o.FinishDateTime >= CURDATE()
+              AND o.FinishDateTime <  CURDATE() + INTERVAL 1 DAY
             ORDER BY o.FinishDateTime ASC
         ";
         $result = $conn->query($sql);
@@ -87,7 +88,9 @@ try {
         $stmt = $conn->prepare("
             UPDATE orderprocessdetailfront
             SET ServingStaffID = ?, ServingDateTime = NOW()
-            WHERE TableID = ? AND ProcessStatus = 1 AND DATE(FinishDateTime) = CURDATE()
+            WHERE TableID = ? AND ProcessStatus = 1
+              AND FinishDateTime >= CURDATE()
+              AND FinishDateTime <  CURDATE() + INTERVAL 1 DAY
               AND ServingStaffID = 0
         ");
         $stmt->bind_param('ii', $staff, $tableId);
