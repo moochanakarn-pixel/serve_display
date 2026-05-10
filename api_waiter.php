@@ -105,7 +105,7 @@ try {
         $stmt = $conn->prepare("
             SELECT StaffID, StaffCode, StaffFirstName, StaffLastName
             FROM staffs
-            WHERE StaffCode = ? AND Deleted = 0
+            WHERE StaffCode = ? AND Deleted = 0 AND Activated = 1
             LIMIT 1
         ");
         $stmt->bind_param('s', $code);
