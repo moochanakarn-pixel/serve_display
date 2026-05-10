@@ -639,6 +639,7 @@ function initAuth() {
       const s = JSON.parse(saved);
       if (s.staff_id && s.staff_name) {
         setStaff(s.staff_id, s.staff_name);
+        loadData();
         return;
       }
     } catch(e) {}

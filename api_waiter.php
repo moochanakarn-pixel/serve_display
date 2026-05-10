@@ -110,18 +110,18 @@ try {
         ");
         $stmt->bind_param('s', $code);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $row    = $result->fetch_assoc();
+        $stmt->bind_result($staffId, $staffCode, $firstName, $lastName);
+        $found = $stmt->fetch();
         $stmt->close();
         $conn->close();
-        if (!$row) {
+        if (!$found) {
             jsonResponse(['success' => false, 'message' => 'ไม่พบรหัสพนักงาน'], 404);
         }
         jsonResponse([
             'success'    => true,
-            'staff_id'   => (int)$row['StaffID'],
-            'staff_code' => $row['StaffCode'],
-            'staff_name' => trim($row['StaffFirstName'] . ' ' . $row['StaffLastName']),
+            'staff_id'   => (int)$staffId,
+            'staff_code' => $staffCode,
+            'staff_name' => trim($firstName . ' ' . $lastName),
         ]);
 
     } else {
