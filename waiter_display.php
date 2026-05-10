@@ -12,7 +12,7 @@
 <title>หน้าเสิร์ฟ — Waiter Display</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon-512.png">
 <style>
 :root{
     --bg:#edf5ff;--bg-2:#fff7ed;
