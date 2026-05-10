@@ -231,9 +231,57 @@ body{
         }
         .btn-fullscreen:hover{background:rgba(255,255,255,0.30);transform:scale(1.04)}
         .btn-fullscreen svg{width:15px;height:15px;flex-shrink:0}
+
+/* ── Staff Info ── */
+.staff-info{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border-radius:9px;padding:4px 10px}
+.staff-name{font-size:12px;font-weight:700;color:#fff;white-space:nowrap}
+.btn-logout{background:rgba(255,255,255,.2);border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;cursor:pointer;font-family:Tahoma,Arial,sans-serif;transition:background .15s}
+.btn-logout:hover{background:rgba(255,255,255,.35)}
+
+/* ── Login Overlay ── */
+.login-overlay{
+    position:fixed;inset:0;z-index:999;
+    background:linear-gradient(135deg,rgba(8,58,112,.97),rgba(22,131,255,.95),rgba(255,138,31,.90));
+    display:flex;align-items:center;justify-content:center;
+}
+.login-overlay.hidden{display:none}
+.login-box{
+    background:#fff;border-radius:24px;padding:36px 32px;width:320px;max-width:90vw;
+    box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;
+}
+.login-icon{font-size:44px;margin-bottom:12px}
+.login-title{font-size:20px;font-weight:800;color:var(--primary-deep);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+.login-input{
+    width:100%;padding:12px 14px;border:2px solid var(--line);border-radius:12px;
+    font-size:16px;font-family:Tahoma,Arial,sans-serif;text-align:center;
+    letter-spacing:.15em;outline:none;transition:border-color .2s;box-sizing:border-box;
+}
+.login-input:focus{border-color:var(--primary)}
+.login-btn{
+    width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;
+    background:linear-gradient(135deg,var(--primary-deep),var(--primary));
+    color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+    font-family:Tahoma,Arial,sans-serif;transition:opacity .15s;
+}
+.login-btn:active{opacity:.85}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-err{color:var(--danger);font-size:12px;font-weight:700;margin-top:10px;min-height:18px}
 </style>
 </head>
 <body>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-icon">🍽️</div>
+    <div class="login-title">Waiter Display</div>
+    <div class="login-sub">กรอกรหัสพนักงานเพื่อเข้าใช้งาน</div>
+    <input class="login-input" id="loginInput" type="text" placeholder="รหัสพนักงาน" autocomplete="off" maxlength="20">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
 
 <!-- HEADER -->
 <div class="hdr">
@@ -247,6 +295,10 @@ body{
   <div class="hdr-r">
     <div class="live"></div>
     <div class="clock" id="clock">--:--</div>
+    <div class="staff-info" id="staffInfo" style="display:none">
+      <span class="staff-name" id="staffNameDisplay"></span>
+      <button class="btn-logout" onclick="doLogout()">ออก</button>
+    </div>
     <button class="rfbtn" id="rfBtn" onclick="loadData()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.36-2.64L3 21V15h6l-2.73 2.73A7 7 0 0 0 19 12z"/>
@@ -288,9 +340,9 @@ body{
    StaffID ควร inject จาก session PHP จริง
    เช่น: const STAFF_ID = <?= $_SESSION['staff_id'] ?? 0 ?>;
 ============================================================ */
-const API     = 'api_waiter.php';
-const STAFF_ID = 0;        // 0 = ไม่ได้ login (demo)
-const REFRESH_SEC = 30;    // auto-refresh ทุก 30 วินาที
+const API        = 'api_waiter.php';
+const REFRESH_SEC = 30;
+let   STAFF_ID    = 0;
 
 /* ── state ── */
 let tables  = [];   // grouped by tableId
@@ -577,8 +629,71 @@ function tick() {
 setInterval(tick, 1000);
 tick();
 
+/* ============================================================
+   LOGIN / LOGOUT
+============================================================ */
+function initAuth() {
+  const saved = localStorage.getItem('waiter_staff');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      if (s.staff_id && s.staff_name) {
+        setStaff(s.staff_id, s.staff_name);
+        return;
+      }
+    } catch(e) {}
+  }
+  showLoginOverlay();
+}
+
+function showLoginOverlay() {
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('staffInfo').style.display = 'none';
+  setTimeout(() => document.getElementById('loginInput').focus(), 100);
+}
+
+function setStaff(id, name) {
+  STAFF_ID = id;
+  document.getElementById('staffNameDisplay').textContent = name;
+  document.getElementById('staffInfo').style.display = 'flex';
+  document.getElementById('loginOverlay').classList.add('hidden');
+}
+
+async function doLogin() {
+  const code = document.getElementById('loginInput').value.trim();
+  const err  = document.getElementById('loginErr');
+  const btn  = document.getElementById('loginBtn');
+  if (!code) { err.textContent = 'กรุณากรอกรหัสพนักงาน'; return; }
+
+  btn.disabled = true;
+  err.textContent = '';
+  try {
+    const res  = await fetch(`${API}?action=lookup_staff&staff_code=${encodeURIComponent(code)}`);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message);
+    localStorage.setItem('waiter_staff', JSON.stringify({ staff_id: json.staff_id, staff_name: json.staff_name }));
+    setStaff(json.staff_id, json.staff_name);
+    document.getElementById('loginInput').value = '';
+    loadData();
+  } catch(e) {
+    err.textContent = e.message || 'เกิดข้อผิดพลาด';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('waiter_staff');
+  STAFF_ID = 0;
+  clearTimeout(timer);
+  showLoginOverlay();
+}
+
 /* START */
-loadData();
+document.getElementById('loginInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+initAuth();
 </script>
 
     <script>

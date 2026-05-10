@@ -96,6 +96,34 @@ try {
         $conn->close();
         jsonResponse(['success' => true]);
 
+    } elseif ($action === 'lookup_staff') {
+        $code = trim((string)($_GET['staff_code'] ?? ''));
+        if ($code === '') {
+            $conn->close();
+            jsonResponse(['success' => false, 'message' => 'กรุณากรอกรหัสพนักงาน'], 400);
+        }
+        $stmt = $conn->prepare("
+            SELECT StaffID, StaffCode, StaffFirstName, StaffLastName
+            FROM staffs
+            WHERE StaffCode = ? AND Deleted = 0
+            LIMIT 1
+        ");
+        $stmt->bind_param('s', $code);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row    = $result->fetch_assoc();
+        $stmt->close();
+        $conn->close();
+        if (!$row) {
+            jsonResponse(['success' => false, 'message' => 'ไม่พบรหัสพนักงาน'], 404);
+        }
+        jsonResponse([
+            'success'    => true,
+            'staff_id'   => (int)$row['StaffID'],
+            'staff_code' => $row['StaffCode'],
+            'staff_name' => trim($row['StaffFirstName'] . ' ' . $row['StaffLastName']),
+        ]);
+
     } else {
         $conn->close();
         jsonResponse(['success' => false, 'message' => 'unknown action'], 400);
