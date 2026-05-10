@@ -389,7 +389,7 @@ function groupByTable(rows) {
     if (!map[k]) map[k] = {
       tableId:   r.TableID,
       tableName: r.DisplayTableName || String(r.TableID),
-      earliest:  r.FinishDateTime || r.SubmitOrderDateTime,
+      earliest:  r.FinishDateTime || r.SubmitOrderDateTime || '',
       rows: []
     };
     // ใช้ชื่อโต๊ะล่าสุด (รองรับโต๊ะโอน A3->A5)
@@ -459,8 +459,8 @@ function buildCard(t, allowUnserve = false) {
       ? `<span class="pill p-part">⏳ ${served}/${total}</span>`
       : `<span class="pill p-rdy">🟢 รอเสิร์ฟ</span>`;
 
-  const t0  = new Date(t.earliest.replace(' ', 'T'));
-  const ts  = `${pad(t0.getHours())}:${pad(t0.getMinutes())}`;
+  const t0  = t.earliest ? new Date(t.earliest.replace(' ', 'T')) : null;
+  const ts  = t0 ? `${pad(t0.getHours())}:${pad(t0.getMinutes())}` : '--:--';
 
   const items = t.rows.map(r => {
     const srv = r.ServeStatus == 1;
@@ -576,8 +576,11 @@ async function tapItem(key) {
 }
 
 async function tapServeAll(tableId) {
+  const lockKey = `table_${tableId}`;
+  if (pending.has(lockKey)) return;
+  pending.add(lockKey);
   const t = tables.find(t => t.tableId == tableId);
-  if (!t) return;
+  if (!t) { pending.delete(lockKey); return; }
 
   // Optimistic
   t.rows.forEach(r => r.ServeStatus = 1);
@@ -594,9 +597,10 @@ async function tapServeAll(tableId) {
     const json = await res.json();
     if (!json.success) throw new Error(json.message);
   } catch (e) {
-    // Reload from server on failure
     await loadData();
     toast('⚠️ บันทึกไม่สำเร็จ กำลังโหลดใหม่', true);
+  } finally {
+    pending.delete(lockKey);
   }
 }
 
@@ -617,8 +621,11 @@ async function confirmUnserve(key) {
 
 async function tapUnserveAll(tableId, tableName) {
   if (!confirm(`ยกเลิกเสิร์ฟทั้งโต๊ะ ${tableName}?`)) return;
+  const lockKey = `untable_${tableId}`;
+  if (pending.has(lockKey)) return;
+  pending.add(lockKey);
   const t = tables.find(t => t.tableId == tableId);
-  if (!t) return;
+  if (!t) { pending.delete(lockKey); return; }
 
   t.rows.forEach(r => r.ServeStatus = 0);
   tables = groupByTable(rawRows);
@@ -636,6 +643,8 @@ async function tapUnserveAll(tableId, tableName) {
   } catch (e) {
     await loadData();
     toast('⚠️ บันทึกไม่สำเร็จ', true);
+  } finally {
+    pending.delete(lockKey);
   }
 }
 
@@ -717,7 +726,10 @@ async function doLogin() {
   btn.disabled = true;
   err.textContent = '';
   try {
-    const res  = await fetch(`${API}?action=lookup_staff&staff_code=${encodeURIComponent(code)}`);
+    const fd = new FormData();
+    fd.append('action', 'lookup_staff');
+    fd.append('staff_code', code);
+    const res  = await fetch(API, { method: 'POST', body: fd });
     const json = await res.json();
     if (!json.success) throw new Error(json.message);
     localStorage.setItem('waiter_staff', JSON.stringify({ staff_id: json.staff_id, staff_name: json.staff_name }));

@@ -103,7 +103,7 @@ try {
             WHERE TableID = ? AND ProcessStatus = 1
               AND FinishDateTime >= CURDATE()
               AND FinishDateTime <  CURDATE() + INTERVAL 1 DAY
-              AND ServingStaffID = 0
+              AND ServingDateTime IS NULL
         ");
         $stmt->bind_param('ii', $staff, $tableId);
         if (!$stmt->execute()) throw new Exception($stmt->error);
@@ -128,7 +128,7 @@ try {
         jsonResponse(['success' => true]);
 
     } elseif ($action === 'lookup_staff') {
-        $code = trim((string)($_GET['staff_code'] ?? ''));
+        $code = trim((string)($_POST['staff_code'] ?? $_GET['staff_code'] ?? ''));
         if ($code === '') {
             $conn->close();
             jsonResponse(['success' => false, 'message' => 'กรุณากรอกรหัสพนักงาน'], 400);
