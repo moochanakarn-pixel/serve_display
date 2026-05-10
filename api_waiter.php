@@ -121,7 +121,7 @@ try {
             'success'    => true,
             'staff_id'   => (int)$staffId,
             'staff_code' => $staffCode,
-            'staff_name' => trim($firstName . ' ' . $lastName),
+            'staff_name' => trim($firstName),
         ]);
 
     } else {

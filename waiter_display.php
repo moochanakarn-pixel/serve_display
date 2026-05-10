@@ -19,6 +19,7 @@
     --shadow:0 12px 28px rgba(15,23,42,.10);
     --shadow-soft:0 8px 18px rgba(22,131,255,.08);
     --radius:20px;--radius-sm:12px;
+    --grn:var(--success);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{min-height:100%;font-family:Tahoma,Arial,sans-serif;color:var(--text)}
@@ -204,7 +205,7 @@ body{
 .toast{
     position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
     padding:11px 22px;border-radius:24px;font-size:13px;font-weight:700;
-    z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+    z-index:9999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);
     white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;background:#fff;
 }
 .toast.t-ok{border:1px solid #bfeacc;color:var(--success)}
@@ -345,10 +346,11 @@ const REFRESH_SEC = 30;
 let   STAFF_ID    = 0;
 
 /* ── state ── */
-let tables  = [];   // grouped by tableId
-let rawRows = [];   // rows จาก API
-let filter  = 'all';
-let timer   = null;
+let tables   = [];
+let rawRows  = [];
+let filter   = 'all';
+let timer    = null;
+const pending = new Set(); // rowKey ที่กำลัง POST อยู่
 
 /* ============================================================
    LOAD จาก api_waiter.php
@@ -385,15 +387,18 @@ function groupByTable(rows) {
     if (!map[k]) map[k] = {
       tableId:   r.TableID,
       tableName: r.DisplayTableName || String(r.TableID),
-      earliest:  r.SubmitOrderDateTime,
+      earliest:  r.FinishDateTime || r.SubmitOrderDateTime,
       rows: []
     };
-    if (r.SubmitOrderDateTime < map[k].earliest)
-      map[k].earliest = r.SubmitOrderDateTime;
+    // ใช้ชื่อโต๊ะล่าสุด (รองรับโต๊ะโอน A3->A5)
+    if (r.FinishDateTime && r.FinishDateTime > map[k].earliest) {
+      map[k].tableName = r.DisplayTableName || String(r.TableID);
+      map[k].earliest  = r.FinishDateTime;
+    }
     map[k].rows.push(r);
   });
   return Object.values(map).sort((a,b) => {
-    // pending ก่อน → sort ตามเวลาสั่ง
+    // pending ก่อน → sort ตามเวลาออกจากครัว
     const aDone = a.rows.every(r => r.ServeStatus == 1) ? 1 : 0;
     const bDone = b.rows.every(r => r.ServeStatus == 1) ? 1 : 0;
     return aDone - bDone || a.earliest.localeCompare(b.earliest);
@@ -461,7 +466,7 @@ function buildCard(t) {
       ? `<span class="pill p-part">⏳ ${served}/${total}</span>`
       : `<span class="pill p-rdy">🟢 รอเสิร์ฟ</span>`;
 
-  const t0  = new Date(t.earliest);
+  const t0  = new Date(t.earliest.replace(' ', 'T'));
   const ts  = `${pad(t0.getHours())}:${pad(t0.getMinutes())}`;
 
   const items = t.rows.map(r => {
@@ -517,11 +522,13 @@ function buildCard(t) {
    ACTIONS — POST ไปที่ api_waiter.php
 ============================================================ */
 async function tapItem(key) {
+  if (pending.has(key)) return;
   const r = rawRows.find(r => rowKey(r) === key);
   if (!r) return;
 
   const wasServed = r.ServeStatus == 1;
   const action    = wasServed ? 'unserve_item' : 'serve_item';
+  pending.add(key);
 
   // Optimistic UI update
   r.ServeStatus = wasServed ? 0 : 1;
@@ -554,6 +561,8 @@ async function tapItem(key) {
     tables = groupByTable(rawRows);
     render();
     toast('⚠️ บันทึกไม่สำเร็จ', true);
+  } finally {
+    pending.delete(key);
   }
 }
 
