@@ -27,7 +27,7 @@ try {
                 o.FinishDateTime,
                 o.ServingStaffID,
                 o.ServingDateTime,
-                CASE WHEN o.ServingStaffID != 0 THEN 1 ELSE 0 END AS ServeStatus
+                CASE WHEN o.ServingDateTime IS NOT NULL THEN 1 ELSE 0 END AS ServeStatus
             FROM orderprocessdetailfront o
             WHERE o.ProcessStatus = 1
               AND DATE(o.FinishDateTime) = CURDATE()
