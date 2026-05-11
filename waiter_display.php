@@ -478,11 +478,8 @@ function buildCard(t, allowUnserve = false) {
     else if (r.ProductSetType <   0) tag = `<span class="tag sub">↳ ในเซต</span>`;
     else if (r.ProductSetType == 15) tag = `<span class="tag add">➕ Add-on</span>`;
 
-    const tappable = !srv || allowUnserve;
-    const onclick  = tappable
-      ? (srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`)
-      : '';
-    return `<div class="irow${srv ? ' served' : ''}${!tappable ? ' locked' : ''}" data-key="${key}" ${onclick}>
+    const onclick = srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`;
+    return `<div class="irow${srv ? ' served' : ''}" data-key="${key}" ${onclick}>
       <div class="chk">
         <svg class="chk-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
@@ -532,6 +529,7 @@ function buildCard(t, allowUnserve = false) {
    ACTIONS — POST ไปที่ api_waiter.php
 ============================================================ */
 async function tapItem(key) {
+  if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
   const r = rawRows.find(r => rowKey(r) === key);
   if (!r) return;
 
@@ -571,6 +569,7 @@ async function tapItem(key) {
 }
 
 async function tapServeAll(tableId) {
+  if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
   const lockKey = `table_${tableId}`;
   if (pending.has(lockKey)) return;
   pending.add(lockKey);
@@ -615,6 +614,7 @@ async function confirmUnserve(key) {
 }
 
 async function tapUnserveAll(tableId, tableName) {
+  if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
   if (!confirm(`ยกเลิกเสิร์ฟทั้งโต๊ะ ${tableName}?`)) return;
   const lockKey = `untable_${tableId}`;
   if (pending.has(lockKey)) return;
@@ -647,7 +647,7 @@ async function tapUnserveAll(tableId, tableName) {
    HELPERS
 ============================================================ */
 function rowKey(r) {
-  return `${r.ProductLevelID}_${r.ProcessID}_${r.SubProcessID}_${r.PrinterID}`;
+  return `${r.ProductLevelID}_${r.ProcessID}_${r.SubProcessID}_${r.PrinterID}_${r.TableID}`;
 }
 function pad(n)  { return String(n).padStart(2, '0'); }
 function esc(s)  { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
