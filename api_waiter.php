@@ -148,6 +148,35 @@ try {
             'staff_name' => trim($firstName),
         ]);
 
+    } elseif ($action === 'debug_query') {
+        $info = [];
+
+        $r = $conn->query("SELECT CURDATE() AS cd, NOW() AS now, @@global.time_zone AS gtz, @@session.time_zone AS stz");
+        $info['server_time'] = $r ? $r->fetch_assoc() : $conn->error;
+
+        $r = $conn->query("SELECT DATABASE() AS db");
+        $info['current_db'] = $r ? $r->fetch_assoc() : $conn->error;
+
+        $r = $conn->query("SELECT COUNT(*) AS total FROM orderprocessdetailfront");
+        $info['total_rows'] = $r ? $r->fetch_assoc() : $conn->error;
+
+        $r = $conn->query("SELECT COUNT(*) AS cnt FROM orderprocessdetailfront WHERE ProcessStatus = 1");
+        $info['status1_rows'] = $r ? $r->fetch_assoc() : $conn->error;
+
+        $r = $conn->query("SELECT COUNT(*) AS cnt, MIN(FinishDateTime) AS min_fd, MAX(FinishDateTime) AS max_fd FROM orderprocessdetailfront WHERE ProcessStatus = 1");
+        $info['status1_dates'] = $r ? $r->fetch_assoc() : $conn->error;
+
+        $r = $conn->query("SELECT COUNT(*) AS cnt FROM orderprocessdetailfront WHERE ProcessStatus = 1 AND FinishDateTime >= CURDATE() AND FinishDateTime < CURDATE() + INTERVAL 1 DAY");
+        $info['today_filter'] = $r ? $r->fetch_assoc() : $conn->error;
+
+        $r = $conn->query("SHOW COLUMNS FROM orderprocessdetailfront LIKE 'Serving%'");
+        $cols = [];
+        if ($r) { while ($row = $r->fetch_assoc()) $cols[] = $row; }
+        $info['serving_columns'] = $cols ?: $conn->error;
+
+        $conn->close();
+        jsonResponse(['success' => true, 'debug' => $info]);
+
     } else {
         $conn->close();
         jsonResponse(['success' => false, 'message' => 'unknown action'], 400);
