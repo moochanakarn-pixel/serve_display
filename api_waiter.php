@@ -80,6 +80,7 @@ try {
             WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ? AND TableID = ?
               AND ProcessStatus = 1
               AND FinishDateTime >= NOW() - INTERVAL 24 HOUR
+              AND ServingDateTime IS NULL
         ");
         $stmt->bind_param('iiiiii', $staff, $plid, $pid, $spid, $prid, $tbl);
         if (!$stmt->execute()) throw new Exception($stmt->error);
