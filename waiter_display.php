@@ -213,6 +213,12 @@ body{
     background:var(--secondary-soft);border:1px solid #ffd8b0;
     border-radius:8px;padding:3px 10px;flex-shrink:0;
 }
+.i-time{
+    font-size:11px;font-weight:700;color:var(--muted);
+    background:var(--surface-soft);border:1px solid var(--line);
+    border-radius:6px;padding:2px 7px;flex-shrink:0;white-space:nowrap;
+}
+.irow.served .i-time{opacity:.5}
 
 /* PROGRESS */
 .prog-wrap{padding:8px 14px 10px}
@@ -529,6 +535,10 @@ function buildCard(t, allowUnserve = false) {
     else if (r.ProductSetType <   0) tag = `<span class="tag sub">↳ ในเซต</span>`;
     else if (r.ProductSetType == 15) tag = `<span class="tag add">➕ Add-on</span>`;
 
+    const ft = r.FinishDateTime ? (() => {
+      const d = new Date(r.FinishDateTime.replace(' ', 'T'));
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })() : '';
     const onclick = srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`;
     return `<div class="irow${srv ? ' served' : ''}" data-key="${key}" ${onclick}>
       <div class="chk">
@@ -538,6 +548,7 @@ function buildCard(t, allowUnserve = false) {
         <div class="i-name">${esc(r.ProductName)}</div>
         ${tag ? `<div class="i-tags">${tag}</div>` : ''}
       </div>
+      ${ft ? `<div class="i-time">🕐 ${ft}</div>` : ''}
       <div class="i-qty">×${parseFloat(r.ProductAmount)}</div>
     </div>`;
   }).join('');
