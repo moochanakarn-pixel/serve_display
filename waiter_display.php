@@ -288,7 +288,7 @@ body{
 .empty p{font-size:12px;margin-top:6px;line-height:1.7}
 
 /* LOADING */
-.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:14px;color:var(--muted)}
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:14px;color:var(--muted);grid-column:1/-1}
 .spinner{width:28px;height:28px;border:2.5px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:rot .7s linear infinite}
 
 /* TOAST */
@@ -824,6 +824,7 @@ function jumpToTable(tableId) {
 
 /* ── confirm before unserve ── */
 async function confirmUnserve(key) {
+  if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
   const ok = await showConfirm({ ico: '↩️', title: 'ยกเลิกการเสิร์ฟ?', msg: 'ต้องการยกเลิกรายการนี้ใช่ไหม', confirmLabel: 'ยกเลิกเสิร์ฟ' });
   if (!ok) return;
   await tapItem(key);
