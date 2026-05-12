@@ -227,6 +227,14 @@ body{
 .prog-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;font-weight:700}
 .prog-lbl .pc{color:var(--success)}
 
+/* COOKING BADGE */
+.cook-badge{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;
+    background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;
+    white-space:nowrap;
+}
+
 /* SERVE ALL BTN */
 .srv-btn{
     margin:0 14px 13px;padding:11px;border:none;border-radius:var(--radius-sm);
@@ -405,6 +413,7 @@ let   STAFF_ID    = 0;
 /* ── state ── */
 let tables   = [];
 let rawRows  = [];
+let cooking  = {}; // {TableID: stillCookingCount}
 let filter   = 'wait';
 let search   = '';
 let timer    = null;
@@ -425,6 +434,7 @@ async function loadData() {
     if (!json.success) throw new Error(json.message || 'API error');
 
     rawRows = json.rows;
+    cooking = json.cooking || {};
     tables  = groupByTable(rawRows);
     hideError();
 
@@ -512,10 +522,11 @@ function render() {
 
 /* ── build card HTML ── */
 function buildCard(t, allowUnserve = false) {
-  const total   = t.rows.length;
-  const served  = t.rows.filter(r => r.ServeStatus == 1).length;
-  const allDone = served === total;
-  const pct     = total ? Math.round(served / total * 100) : 0;
+  const total     = t.rows.length;
+  const served    = t.rows.filter(r => r.ServeStatus == 1).length;
+  const allDone   = served === total;
+  const pct       = total ? Math.round(served / total * 100) : 0;
+  const stillCook = cooking[t.tableId] || 0;
 
   const cls  = allDone ? 'c-done' : served > 0 ? 'c-part' : 'c-rdy';
   const pill = allDone
@@ -577,6 +588,7 @@ function buildCard(t, allowUnserve = false) {
       <div class="m-item">🕐 <b>${ts}</b></div>
       <div class="m-item">🍽️ <b>${total}</b> รายการ</div>
       <div class="m-item" style="color:var(--grn)">✅ <b>${served}/${total}</b></div>
+      ${stillCook > 0 ? `<div class="m-item"><span class="cook-badge">🍳 ยังทำอยู่ ${stillCook}</span></div>` : ''}
     </div>
     <div class="items">${items}</div>
     <div class="prog-wrap">
