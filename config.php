@@ -26,7 +26,7 @@ $__localSettings = loadLocalSettings();
 // =============================
 // App configuration
 // =============================
-define('APP_TITLE', 'Waiter KDS');
+define('APP_TITLE', 'Serve Display');
 define('APP_TIMEZONE', 'Asia/Bangkok');
 define('APP_REFRESH_MS', 15000);
 define('FINISHED_REFRESH_EVERY', 3);

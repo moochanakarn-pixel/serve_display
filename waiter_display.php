@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="เสิร์ฟ">
-<title>หน้าเสิร์ฟ — Waiter Display</title>
+<title>Serve Display</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="icon-512.png">
@@ -375,7 +375,7 @@ body{
 <div class="login-overlay" id="loginOverlay">
   <div class="login-box">
     <div class="login-icon">🍽️</div>
-    <div class="login-title">Waiter Display</div>
+    <div class="login-title">Serve Display</div>
     <div class="login-sub">กรอกรหัสพนักงานเพื่อเข้าใช้งาน</div>
     <input class="login-input" id="loginInput" type="text" placeholder="รหัสพนักงาน" autocomplete="off" maxlength="20">
     <button class="login-btn" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
@@ -389,7 +389,7 @@ body{
     <div class="hdr-icon">🍽️</div>
     <div>
       <div class="hdr-title">เสิร์ฟอาหาร</div>
-      <div class="hdr-sub">Waiter Display</div>
+      <div class="hdr-sub">Serve Display</div>
     </div>
   </div>
   <div class="hdr-r">
