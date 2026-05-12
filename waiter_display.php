@@ -56,17 +56,6 @@ body{
 .clock{font-size:13px;font-weight:700;color:rgba(255,255,255,.9)}
 
 /* SUMMARY BAR */
-.sum-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 12px;max-width:1920px;margin:0 auto}
-.sum-item{
-    background:rgba(255,255,255,.88);border:1px solid rgba(255,255,255,.72);
-    border-radius:14px;padding:8px 12px;text-align:center;box-shadow:var(--shadow);
-}
-.sum-n{font-size:22px;font-weight:700;line-height:1}
-.sum-l{font-size:10px;color:var(--muted);margin-top:3px;font-weight:700}
-.s-wait .sum-n{color:var(--warning)}
-.s-rdy .sum-n{color:var(--primary)}
-.s-done .sum-n{color:var(--success)}
-
 /* FILTER BAR */
 .fbar{display:flex;gap:6px;padding:6px 12px 4px;overflow-x:auto;scrollbar-width:none;max-width:1920px;margin:0 auto}
 .fbar::-webkit-scrollbar{display:none}
@@ -381,12 +370,6 @@ body{
   </div>
 </div>
 
-<!-- SUMMARY -->
-<div class="sum-bar">
-  <div class="sum-item s-wait"><div class="sum-n" id="sn-wait">-</div><div class="sum-l">โต๊ะรอเสิร์ฟ</div></div>
-  <div class="sum-item s-rdy"><div class="sum-n" id="sn-items">-</div><div class="sum-l">รายการค้าง</div></div>
-  <div class="sum-item s-done"><div class="sum-n" id="sn-done">-</div><div class="sum-l">เสิร์ฟแล้ว</div></div>
-</div>
 
 <!-- FILTER -->
 <div class="fbar">
@@ -486,18 +469,6 @@ function groupByTable(rows) {
    RENDER
 ============================================================ */
 function render() {
-  // summary counts
-  let nWait = 0, nItems = 0, nDone = 0;
-  tables.forEach(t => {
-    const d = t.rows.filter(r => r.ServeStatus == 1).length;
-    if (d < t.rows.length) nWait++;
-    nItems += (t.rows.length - d);
-    nDone  += d;
-  });
-  document.getElementById('sn-wait').textContent  = nWait;
-  document.getElementById('sn-items').textContent = nItems;
-  document.getElementById('sn-done').textContent  = nDone;
-
   const nW = tables.filter(t => t.rows.some(r  => r.ServeStatus == 0)).length;
   const nD = tables.filter(t => t.rows.every(r => r.ServeStatus == 1)).length;
   document.getElementById('fc-wait').textContent = nW;
@@ -590,7 +561,7 @@ function buildCard(t, allowUnserve = false) {
   return `<div class="card ${cls}" data-table="${t.tableId}">
     <div class="c-hdr">
       <div class="tbl-badge">
-        <div class="tbl-num">T${esc(t.tableName)}</div>
+        <div class="tbl-num">${esc(t.tableName)}</div>
         <div class="tbl-name">โต๊ะ ${esc(t.tableName)}</div>
       </div>
       ${pill}
