@@ -27,8 +27,10 @@ try {
                 o.FinishDateTime,
                 o.ServingStaffID,
                 o.ServingDateTime,
-                CASE WHEN o.ServingDateTime IS NOT NULL THEN 1 ELSE 0 END AS ServeStatus
+                CASE WHEN o.ServingDateTime IS NOT NULL THEN 1 ELSE 0 END AS ServeStatus,
+                TRIM(COALESCE(s.StaffFirstName, '')) AS ServingStaffName
             FROM orderprocessdetailfront o
+            LEFT JOIN staffs s ON s.StaffID = o.ServingStaffID AND o.ServingStaffID > 0
             WHERE o.ProcessStatus = 1
               AND o.FinishDateTime >= NOW() - INTERVAL 24 HOUR
             ORDER BY o.FinishDateTime ASC

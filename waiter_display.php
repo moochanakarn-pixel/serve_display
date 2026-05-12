@@ -129,7 +129,12 @@ body{
 @keyframes rot{to{transform:rotate(360deg)}}
 
 /* CONTENT */
-.content{padding:8px 12px 16px;max-width:1920px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.content{padding:8px 12px 16px;max-width:1920px;margin:0 auto;display:grid;gap:10px;
+  grid-template-columns:1fr;
+}
+@media(min-width:640px){.content{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1100px){.content{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1600px){.content{grid-template-columns:repeat(4,1fr)}}
 
 .sec-lbl{
     font-size:10px;font-weight:700;color:var(--muted);
@@ -219,6 +224,10 @@ body{
     border-radius:6px;padding:2px 7px;flex-shrink:0;white-space:nowrap;
 }
 .irow.served .i-time{opacity:.5}
+.i-staff{
+    font-size:10px;font-weight:700;color:var(--success);
+    display:flex;align-items:center;gap:3px;margin-top:2px;
+}
 
 /* PROGRESS */
 .prog-wrap{padding:8px 14px 10px}
@@ -249,7 +258,7 @@ body{
 .srv-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
 /* EMPTY */
-.empty{text-align:center;padding:64px 20px;color:var(--muted)}
+.empty{text-align:center;padding:64px 20px;color:var(--muted);grid-column:1/-1}
 .empty .ico{font-size:48px;margin-bottom:16px}
 .empty h3{font-size:16px;color:var(--text);font-weight:700}
 .empty p{font-size:12px;margin-top:6px;line-height:1.7}
@@ -550,6 +559,7 @@ function buildCard(t, allowUnserve = false) {
       const d = new Date(r.FinishDateTime.replace(' ', 'T'));
       return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     })() : '';
+    const staffLabel = (srv && r.ServingStaffName) ? `<div class="i-staff">👤 ${esc(r.ServingStaffName)}</div>` : '';
     const onclick = srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`;
     return `<div class="irow${srv ? ' served' : ''}" data-key="${key}" ${onclick}>
       <div class="chk">
@@ -558,6 +568,7 @@ function buildCard(t, allowUnserve = false) {
       <div class="i-info">
         <div class="i-name">${esc(r.ProductName)}</div>
         ${tag ? `<div class="i-tags">${tag}</div>` : ''}
+        ${staffLabel}
       </div>
       ${ft ? `<div class="i-time">🕐 ${ft}</div>` : ''}
       <div class="i-qty">×${parseFloat(r.ProductAmount)}</div>
