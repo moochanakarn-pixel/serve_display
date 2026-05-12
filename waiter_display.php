@@ -380,8 +380,9 @@ body{
 
 <!-- FILTER -->
 <div class="fbar">
-  <button class="fbtn on" id="fb-wait" onclick="setFilter('wait')">⏳ รอเสิร์ฟ <span class="cnt" id="fc-wait">-</span></button>
-  <button class="fbtn"    id="fb-done" onclick="setFilter('done')">✅ เสิร์ฟแล้ว <span class="cnt" id="fc-done">-</span></button>
+  <button class="fbtn on" id="fb-wait"    onclick="setFilter('wait')">⏳ รอเสิร์ฟ <span class="cnt" id="fc-wait">-</span></button>
+  <button class="fbtn"    id="fb-done"    onclick="setFilter('done')">✅ เสิร์ฟแล้ว <span class="cnt" id="fc-done">-</span></button>
+  <button class="fbtn"    id="fb-kitchen" onclick="setFilter('kitchen')">🍳 อยู่ในครัว <span class="cnt" id="fc-kitchen">-</span></button>
 </div>
 <!-- SEARCH + TABLE CHIPS -->
 <div class="sbar">
@@ -410,12 +411,13 @@ const REFRESH_SEC = 30;
 let   STAFF_ID    = 0;
 
 /* ── state ── */
-let tables   = [];
-let rawRows  = [];
-let cooking  = {}; // {TableID: stillCookingCount}
-let filter   = 'wait';
-let search   = '';
-let timer    = null;
+let tables      = [];
+let rawRows     = [];
+let cooking     = {}; // {TableID: stillCookingCount}
+let cookingRows = []; // full rows for kitchen tab
+let filter      = 'wait';
+let search      = '';
+let timer       = null;
 const pending = new Set(); // rowKey ที่กำลัง POST อยู่
 
 /* ============================================================
@@ -432,9 +434,10 @@ async function loadData() {
 
     if (!json.success) throw new Error(json.message || 'API error');
 
-    rawRows = json.rows;
-    cooking = json.cooking || {};
-    tables  = groupByTable(rawRows);
+    rawRows      = json.rows;
+    cooking      = json.cooking      || {};
+    cookingRows  = json.cooking_rows || [];
+    tables       = groupByTable(rawRows);
     hideError();
 
   } catch (e) {
@@ -478,23 +481,39 @@ function groupByTable(rows) {
 function render() {
   const nW = tables.filter(t => t.rows.some(r  => r.ServeStatus == 0)).length;
   const nD = tables.filter(t => t.rows.every(r => r.ServeStatus == 1)).length;
-  document.getElementById('fc-wait').textContent = nW;
-  document.getElementById('fc-done').textContent = nD;
+  const nK = Object.keys(cooking).length;
+  document.getElementById('fc-wait').textContent    = nW;
+  document.getElementById('fc-done').textContent    = nD;
+  document.getElementById('fc-kitchen').textContent = nK;
 
   // update table chips
   renderChips();
 
-  // filter
+  const el = document.getElementById('main');
+
+  // kitchen tab — read-only
+  if (filter === 'kitchen') {
+    let kTables = groupByTable(cookingRows);
+    if (search) {
+      const q = search.toLowerCase();
+      kTables = kTables.filter(t => String(t.tableName).toLowerCase().includes(q) || String(t.tableId).includes(q));
+    }
+    if (!kTables.length) {
+      el.innerHTML = `<div class="empty"><div class="ico">🍳</div><h3>ไม่มีรายการในครัว</h3><p></p></div>`;
+      return;
+    }
+    el.innerHTML = kTables.map(t => buildKitchenCard(t)).join('');
+    return;
+  }
+
+  // wait / done tabs
   let shown = tables.filter(t => t.rows.some(r => r.ServeStatus == 0));
   if (filter === 'done') shown = tables.filter(t => t.rows.every(r => r.ServeStatus == 1));
-
-  // search filter
   if (search) {
     const q = search.toLowerCase();
     shown = shown.filter(t => String(t.tableName).toLowerCase().includes(q) || String(t.tableId).includes(q));
   }
 
-  const el = document.getElementById('main');
   if (!shown.length) {
     const emptyMsg = filter === 'done'
       ? { ico: '📋', h: 'ยังไม่มีโต๊ะที่เสิร์ฟครบ', p: '' }
@@ -502,9 +521,7 @@ function render() {
     el.innerHTML = `<div class="empty"><div class="ico">${emptyMsg.ico}</div><h3>${emptyMsg.h}</h3><p>${emptyMsg.p}</p></div>`;
     return;
   }
-  let html = '';
-  shown.forEach(t => html += buildCard(t, filter === 'done'));
-  el.innerHTML = html;
+  el.innerHTML = shown.map(t => buildCard(t, filter === 'done')).join('');
 }
 
 /* ── build card HTML ── */
@@ -661,10 +678,54 @@ async function tapServeAll(tableId) {
   }
 }
 
+/* ── kitchen card (read-only) ── */
+function buildKitchenCard(t) {
+  const total = t.rows.length;
+  const inProcess = t.rows.filter(r => r.ProcessStatus == 2).length;
+  const waiting   = total - inProcess;
+  const t0  = t.earliest ? new Date(t.earliest.replace(' ', 'T')) : null;
+  const ts  = t0 ? `${pad(t0.getHours())}:${pad(t0.getMinutes())}` : '--:--';
+
+  const pill = inProcess > 0
+    ? `<span class="pill p-part">🍳 กำลังทำ ${inProcess}/${total}</span>`
+    : `<span class="pill" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa">⏳ รอทำ ${waiting}</span>`;
+
+  const items = t.rows.map(r => {
+    const cooking = r.ProcessStatus == 2;
+    let tag = '';
+    if      (r.ProductSetType ==  7) tag = `<span class="tag set">📦 เซต</span>`;
+    else if (r.ProductSetType <   0) tag = `<span class="tag sub">↳ ในเซต</span>`;
+    else if (r.ProductSetType == 15) tag = `<span class="tag add">➕ Add-on</span>`;
+    return `<div class="irow" style="cursor:default">
+      <div style="font-size:18px;flex-shrink:0">${cooking ? '🍳' : '⏳'}</div>
+      <div class="i-info">
+        <div class="i-name">${esc(r.ProductName)}</div>
+        ${tag ? `<div class="i-tags">${tag}</div>` : ''}
+      </div>
+      <div class="i-qty">×${parseFloat(r.ProductAmount)}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="card" style="border-color:#fed7aa;box-shadow:0 0 0 2px rgba(194,65,12,.08),var(--shadow)" data-table="${t.tableId}">
+    <div class="c-hdr">
+      <div class="tbl-badge">
+        <div class="tbl-num">${esc(t.tableName)}</div>
+        <div class="tbl-name">โต๊ะ ${esc(t.tableName)}</div>
+      </div>
+      ${pill}
+    </div>
+    <div class="c-meta">
+      <div class="m-item">🕐 <b>${ts}</b></div>
+      <div class="m-item">🍽️ <b>${total}</b> รายการ</div>
+    </div>
+    <div class="items">${items}</div>
+  </div>`;
+}
+
 /* ── filter ── */
 function setFilter(f) {
   filter = f;
-  ['wait', 'done'].forEach(x =>
+  ['wait', 'done', 'kitchen'].forEach(x =>
     document.getElementById('fb-' + x).classList.toggle('on', x === f)
   );
   document.getElementById('main').classList.toggle('view-done', f === 'done');
@@ -688,13 +749,21 @@ function clearSearch() {
 function renderChips() {
   const el = document.getElementById('tchips');
   if (!el) return;
-  let src = tables.filter(t => t.rows.some(r => r.ServeStatus == 0));
-  if (filter === 'done') src = tables.filter(t => t.rows.every(r => r.ServeStatus == 1));
+
+  let src;
+  if (filter === 'kitchen') {
+    src = groupByTable(cookingRows).map(t => ({ ...t, _kitchen: true }));
+  } else if (filter === 'done') {
+    src = tables.filter(t => t.rows.every(r => r.ServeStatus == 1));
+  } else {
+    src = tables.filter(t => t.rows.some(r => r.ServeStatus == 0));
+  }
 
   el.innerHTML = src.map(t => {
-    const allDone = t.rows.every(r => r.ServeStatus == 1);
-    const anyDone = t.rows.some(r => r.ServeStatus == 1);
-    const cls = allDone ? 't-done' : anyDone ? 't-part' : 't-wait';
+    const cls = t._kitchen ? 'tchip' : (
+      t.rows.every(r => r.ServeStatus == 1) ? 't-done' :
+      t.rows.some(r  => r.ServeStatus == 1) ? 't-part' : 't-wait'
+    );
     return `<button class="tchip ${cls}" onclick="jumpToTable(${t.tableId})">${esc(t.tableName)}</button>`;
   }).join('');
 }

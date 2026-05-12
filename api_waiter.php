@@ -43,22 +43,28 @@ try {
             $rows[] = $row;
         }
 
-        // ดึงจำนวนรายการที่ยังทำอยู่ในครัว (ProcessStatus 0=รอทำ, 2=กำลังทำ) ต่อโต๊ะ
+        // ดึงรายละเอียดรายการที่ยังอยู่ในครัว (ProcessStatus 0=รอทำ, 2=กำลังทำ)
         $cookSql = "
-            SELECT TableID, COUNT(*) AS cnt
+            SELECT TableID,
+                   COALESCE(DisplayTableName, TableID) AS DisplayTableName,
+                   ProductName, ProductAmount, ProductSetType, ParentProcessID,
+                   ProcessStatus, SubmitOrderDateTime
             FROM orderprocessdetailfront
             WHERE ProcessStatus IN (0, 2)
-            GROUP BY TableID
+            ORDER BY TableID ASC, SubmitOrderDateTime ASC
         ";
         $cookResult = $conn->query($cookSql);
         if (!$cookResult) throw new Exception($conn->error);
-        $cooking = [];
+        $cookingRows = [];
+        $cooking     = [];
         while ($row = $cookResult->fetch_assoc()) {
-            $cooking[(int)$row['TableID']] = (int)$row['cnt'];
+            $cookingRows[] = $row;
+            $tid = (int)$row['TableID'];
+            $cooking[$tid] = ($cooking[$tid] ?? 0) + 1;
         }
 
         $conn->close();
-        jsonResponse(['success' => true, 'rows' => $rows, 'cooking' => $cooking]);
+        jsonResponse(['success' => true, 'rows' => $rows, 'cooking' => $cooking, 'cooking_rows' => $cookingRows]);
 
     } elseif ($action === 'serve_item') {
         $plid  = (int)($_POST['ProductLevelID'] ?? 0);
