@@ -68,7 +68,7 @@ body{
 .s-done .sum-n{color:var(--success)}
 
 /* FILTER BAR */
-.fbar{display:flex;gap:6px;padding:6px 12px 8px;overflow-x:auto;scrollbar-width:none;max-width:1920px;margin:0 auto}
+.fbar{display:flex;gap:6px;padding:6px 12px 4px;overflow-x:auto;scrollbar-width:none;max-width:1920px;margin:0 auto}
 .fbar::-webkit-scrollbar{display:none}
 .fbtn{
     flex-shrink:0;padding:6px 14px;border-radius:999px;
@@ -83,6 +83,38 @@ body{
 }
 .fbtn.on{background:var(--primary);border-color:var(--primary);color:#fff}
 .fbtn.on .cnt{background:rgba(255,255,255,.25);color:#fff}
+
+/* SEARCH BAR */
+.sbar{display:flex;align-items:center;gap:8px;padding:4px 12px 6px;max-width:1920px;margin:0 auto}
+.sbar-wrap{position:relative;flex:1;max-width:320px}
+.sbar-inp{
+    width:100%;padding:7px 30px 7px 32px;border-radius:999px;
+    border:1.5px solid var(--line-strong);background:#fff;
+    font-size:13px;font-family:Tahoma,Arial,sans-serif;color:var(--text);
+    outline:none;transition:border-color .15s;
+}
+.sbar-inp:focus{border-color:var(--primary)}
+.sbar-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;font-size:14px}
+.sbar-clr{
+    position:absolute;right:9px;top:50%;transform:translateY(-50%);
+    background:none;border:none;cursor:pointer;color:var(--muted);
+    font-size:15px;line-height:1;padding:0;display:none;
+}
+.sbar-clr.show{display:block}
+
+/* TABLE CHIPS */
+.tchips{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;flex:1}
+.tchips::-webkit-scrollbar{display:none}
+.tchip{
+    flex-shrink:0;padding:5px 12px;border-radius:999px;
+    border:1.5px solid var(--line-strong);background:#fff;color:var(--muted);
+    font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;
+    font-family:Tahoma,Arial,sans-serif;white-space:nowrap;
+}
+.tchip:active{transform:scale(.95)}
+.tchip.t-wait{border-color:#bfeacc;color:var(--success);background:var(--success-soft)}
+.tchip.t-part{border-color:#fcd34d;color:var(--warning);background:var(--warning-soft)}
+.tchip.t-done{border-color:var(--line);color:var(--muted);opacity:.6}
 
 /* REFRESH BTN */
 .rfbtn{
@@ -338,6 +370,15 @@ body{
   <button class="fbtn on" id="fb-wait" onclick="setFilter('wait')">⏳ รอเสิร์ฟ <span class="cnt" id="fc-wait">-</span></button>
   <button class="fbtn"    id="fb-done" onclick="setFilter('done')">✅ เสิร์ฟแล้ว <span class="cnt" id="fc-done">-</span></button>
 </div>
+<!-- SEARCH + TABLE CHIPS -->
+<div class="sbar">
+  <div class="sbar-wrap">
+    <span class="sbar-ico">🔍</span>
+    <input class="sbar-inp" id="searchInp" type="text" placeholder="ค้นหาโต๊ะ..." autocomplete="off" oninput="onSearch(this.value)">
+    <button class="sbar-clr" id="searchClr" onclick="clearSearch()">✕</button>
+  </div>
+  <div class="tchips" id="tchips"></div>
+</div>
 
 <div class="err-banner" id="errBanner"></div>
 <div class="content" id="main">
@@ -359,6 +400,7 @@ let   STAFF_ID    = 0;
 let tables   = [];
 let rawRows  = [];
 let filter   = 'wait';
+let search   = '';
 let timer    = null;
 const pending = new Set(); // rowKey ที่กำลัง POST อยู่
 
@@ -436,9 +478,18 @@ function render() {
   document.getElementById('fc-wait').textContent = nW;
   document.getElementById('fc-done').textContent = nD;
 
+  // update table chips
+  renderChips();
+
   // filter
   let shown = tables.filter(t => t.rows.some(r => r.ServeStatus == 0));
   if (filter === 'done') shown = tables.filter(t => t.rows.every(r => r.ServeStatus == 1));
+
+  // search filter
+  if (search) {
+    const q = search.toLowerCase();
+    shown = shown.filter(t => String(t.tableName).toLowerCase().includes(q) || String(t.tableId).includes(q));
+  }
 
   const el = document.getElementById('main');
   if (!shown.length) {
@@ -503,7 +554,7 @@ function buildCard(t, allowUnserve = false) {
       </button>`;
   }
 
-  return `<div class="card ${cls}">
+  return `<div class="card ${cls}" data-table="${t.tableId}">
     <div class="c-hdr">
       <div class="tbl-badge">
         <div class="tbl-num">T${esc(t.tableName)}</div>
@@ -605,6 +656,47 @@ function setFilter(f) {
     document.getElementById('fb-' + x).classList.toggle('on', x === f)
   );
   render();
+}
+
+/* ── search ── */
+function onSearch(val) {
+  search = val.trim();
+  document.getElementById('searchClr').classList.toggle('show', search.length > 0);
+  render();
+}
+function clearSearch() {
+  search = '';
+  document.getElementById('searchInp').value = '';
+  document.getElementById('searchClr').classList.remove('show');
+  render();
+}
+
+/* ── table chips ── */
+function renderChips() {
+  const el = document.getElementById('tchips');
+  if (!el) return;
+  let src = tables.filter(t => t.rows.some(r => r.ServeStatus == 0));
+  if (filter === 'done') src = tables.filter(t => t.rows.every(r => r.ServeStatus == 1));
+
+  el.innerHTML = src.map(t => {
+    const allDone = t.rows.every(r => r.ServeStatus == 1);
+    const anyDone = t.rows.some(r => r.ServeStatus == 1);
+    const cls = allDone ? 't-done' : anyDone ? 't-part' : 't-wait';
+    return `<button class="tchip ${cls}" onclick="jumpToTable(${t.tableId})">${esc(t.tableName)}</button>`;
+  }).join('');
+}
+function jumpToTable(tableId) {
+  // ถ้า search อยู่ให้ clear ก่อน แล้วจึงเลื่อน
+  if (search) clearSearch();
+  // หา card ด้วย data-table attribute หรือหา card ที่มี button ของ tableId นั้น
+  setTimeout(() => {
+    const card = document.querySelector(`#main .card[data-table="${tableId}"]`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.style.outline = '2.5px solid var(--primary)';
+    card.style.outlineOffset = '2px';
+    setTimeout(() => { card.style.outline = ''; card.style.outlineOffset = ''; }, 1200);
+  }, 50);
 }
 
 /* ── confirm before unserve ── */
