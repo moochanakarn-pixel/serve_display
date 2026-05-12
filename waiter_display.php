@@ -56,7 +56,6 @@ body{
 .clock{font-size:13px;font-weight:700;color:rgba(255,255,255,.9)}
 
 /* SUMMARY BAR */
-/* STICKY FILTER+SEARCH BAR */
 .sticky-bar{
     position:sticky;top:56px;z-index:20;
     background:linear-gradient(180deg,rgba(237,245,255,.98),rgba(237,245,255,.95));
@@ -134,12 +133,6 @@ body{
 @media(min-width:1100px){.content{grid-template-columns:repeat(3,1fr)}}
 @media(min-width:1600px){.content{grid-template-columns:repeat(4,1fr)}}
 
-.sec-lbl{
-    font-size:10px;font-weight:700;color:var(--muted);
-    letter-spacing:.08em;text-transform:uppercase;
-    padding:2px 0 6px;display:flex;align-items:center;gap:8px;
-}
-.sec-lbl::after{content:'';flex:1;height:1px;background:var(--line)}
 
 /* CARD */
 .card{
@@ -184,7 +177,12 @@ body{
     border-top:2px solid rgba(22,131,255,.15);
 }
 .set-divider:first-child{border-top:none}
+.set-divider:active{background:rgba(22,131,255,.14)}
+.set-divider.served{opacity:.4}
+.view-done .set-divider.served{opacity:1}
 .set-label{font-size:12px;font-weight:800;color:var(--primary-deep);display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.set-divider.served .set-label{text-decoration:line-through;color:var(--muted)}
+.view-done .set-divider.served .set-label{text-decoration:none;color:var(--primary-deep)}
 .set-qty{font-size:11px;font-weight:700;color:var(--primary);flex-shrink:0}
 
 /* ITEM ROW */
@@ -472,6 +470,7 @@ body{
 const API        = 'api_waiter.php';
 const REFRESH_SEC = 30;
 let   STAFF_ID    = 0;
+let   STAFF_NAME  = '';
 
 /* ── state ── */
 let tables      = [];
@@ -615,7 +614,8 @@ function buildCard(t, allowUnserve = false) {
         const d = new Date(r.FinishDateTime.replace(' ', 'T'));
         return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
       })() : '';
-      return `<div class="set-divider">
+      const onclick = srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`;
+      return `<div class="set-divider${srv ? ' served' : ''}" data-key="${key}" ${onclick}>
         <div class="set-label">📦 ${esc(r.ProductName)}</div>
         ${ft ? `<div class="i-time" style="margin-right:6px">🕐 ${ft}</div>` : ''}
         <div class="set-qty">×${parseFloat(r.ProductAmount)}</div>
@@ -697,7 +697,8 @@ async function tapItem(key) {
   const newStatus = wasServed ? 0 : 1;
 
   // Optimistic — อัปเดตเฉพาะรายการที่คลิก
-  r.ServeStatus = newStatus;
+  r.ServeStatus      = newStatus;
+  r.ServingStaffName = wasServed ? '' : STAFF_NAME;
   tables = groupByTable(rawRows);
   render();
   toast(wasServed ? '↩️ ยกเลิกติ๊ก' : '✅ ติ๊กเสิร์ฟแล้ว');
@@ -766,14 +767,19 @@ function buildKitchenCard(t) {
     ? `<span class="pill p-part">🍳 กำลังทำ ${inProcess}/${total}</span>`
     : `<span class="pill" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa">⏳ รอทำ ${waiting}</span>`;
 
-  const items = t.rows.map(r => {
-    const cooking = r.ProcessStatus == 2;
+  const items = sortItemsBySet(t.rows).map(r => {
+    const isCooking = r.ProcessStatus == 2;
+    if (r.ProductSetType == 7) {
+      return `<div class="set-divider" style="cursor:default">
+        <div class="set-label">📦 ${esc(r.ProductName)}</div>
+        <div class="set-qty">×${parseFloat(r.ProductAmount)}</div>
+      </div>`;
+    }
     let tag = '';
-    if      (r.ProductSetType ==  7) tag = `<span class="tag set">📦 เซต</span>`;
-    else if (r.ProductSetType <   0) tag = `<span class="tag sub">↳ ในเซต</span>`;
-    else if (r.ProductSetType == 15) tag = `<span class="tag add">➕ Add-on</span>`;
+    if      (parseInt(r.ProductSetType) < 0) tag = `<span class="tag sub">↳ ในเซต</span>`;
+    else if (r.ProductSetType == 15)          tag = `<span class="tag add">➕ Add-on</span>`;
     return `<div class="irow" style="cursor:default">
-      <div style="font-size:18px;flex-shrink:0">${cooking ? '🍳' : '⏳'}</div>
+      <div style="font-size:18px;flex-shrink:0">${isCooking ? '🍳' : '⏳'}</div>
       <div class="i-info">
         <div class="i-name">${esc(r.ProductName)}</div>
         ${tag ? `<div class="i-tags">${tag}</div>` : ''}
@@ -1007,7 +1013,8 @@ function showLoginOverlay() {
 }
 
 function setStaff(id, name) {
-  STAFF_ID = id;
+  STAFF_ID   = id;
+  STAFF_NAME = name;
   document.getElementById('staffNameDisplay').textContent = name;
   document.getElementById('staffInfo').style.display = 'flex';
   document.getElementById('loginOverlay').classList.add('hidden');
