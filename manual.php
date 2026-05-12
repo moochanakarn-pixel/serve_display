@@ -107,107 +107,12 @@ code{font-family:monospace}
   <div class="nav">
     <h3>เนื้อหา</h3>
     <div class="nav-list">
-      <a href="#setup">การติดตั้ง</a>
-      <a href="#db">ฐานข้อมูล</a>
       <a href="#login">การ Login</a>
       <a href="#tabs">หน้าจอหลัก</a>
       <a href="#serve">การเสิร์ฟ</a>
       <a href="#search">ค้นหาโต๊ะ</a>
       <a href="#faq">คำถามที่พบบ่อย</a>
     </div>
-  </div>
-
-  <!-- SETUP -->
-  <div class="sec" id="setup">
-    <div class="sec-title"><span class="ico">⚙️</span> การติดตั้งและตั้งค่า</div>
-
-    <h3>ไฟล์ที่ต้องมี</h3>
-    <table>
-      <tr><th>ไฟล์</th><th>หน้าที่</th></tr>
-      <tr><td><span class="inline-code">waiter_display.php</span></td><td>หน้าจอหลัก — เปิดในเบราว์เซอร์</td></tr>
-      <tr><td><span class="inline-code">api_waiter.php</span></td><td>Backend API รับ-ส่งข้อมูล</td></tr>
-      <tr><td><span class="inline-code">config.php</span></td><td>ค่า config ระบบ (ไม่ต้องแก้)</td></tr>
-      <tr><td><span class="inline-code">auth_check.php</span></td><td>ตรวจสอบสิทธิ์ (ไม่ต้องแก้)</td></tr>
-      <tr><td><span class="inline-code">settings.local.php</span></td><td>ค่า DB และการตั้งค่าของเครื่องนี้ <strong>(ต้องสร้างเอง)</strong></td></tr>
-    </table>
-
-    <h3>สร้างไฟล์ settings.local.php</h3>
-    <p>สร้างไฟล์นี้ใน folder เดียวกับโปรแกรม ใส่ค่าตามฐานข้อมูลจริง:</p>
-<pre><code>&lt;?php
-return array(
-  // ฐานข้อมูล
-  'db_host'               => '127.0.0.1',   // IP หรือ hostname ของ MySQL
-  'db_port'               => 3306,           // port (ปกติ 3306)
-  'db_name'               => 'ชื่อ_database',
-  'db_user'               => 'ชื่อ_user',
-  'db_pass'               => 'รหัสผ่าน',
-
-  // ตัวเลือกเพิ่มเติม
-  'current_computer_id'   => 1,              // หมายเลขเครื่องนี้
-  'current_computer_name' => '',             // ชื่อเครื่อง (ไม่บังคับ)
-  'finish_staff_id'       => 1,
-  'threshold_yellow'      => 10,
-  'threshold_red'         => 20,
-  'sound_enabled'         => 0,
-);</code></pre>
-
-    <div class="alert alert-warn">
-      <span class="alert-ico">⚠️</span>
-      <div>ไฟล์ <strong>settings.local.php</strong> ไม่ถูก commit เข้า git ต้องสร้างใหม่ทุกครั้งที่ติดตั้งบนเครื่องใหม่</div>
-    </div>
-
-    <h3>เปิดใช้งาน</h3>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <div class="step-title">สร้าง settings.local.php ตามตัวอย่างด้านบน</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <div class="step-title">เพิ่ม column ในฐานข้อมูล (ทำครั้งเดียว)</div>
-          <div class="step-desc">ดูรายละเอียดในหัวข้อ "ฐานข้อมูล" ด้านล่าง</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <div class="step-title">เปิดเบราว์เซอร์ไปที่ waiter_display.php</div>
-          <div class="step-desc">เช่น http://192.168.1.10/serve_display/waiter_display.php</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-body">
-          <div class="step-title">เพิ่มเป็น Shortcut บนหน้าจอ (แนะนำ)</div>
-          <div class="step-desc">Android: เมนู → เพิ่มในหน้าจอหลัก &nbsp;|&nbsp; iOS: Share → Add to Home Screen</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- DB -->
-  <div class="sec" id="db">
-    <div class="sec-title"><span class="ico">🗄️</span> การเตรียมฐานข้อมูล</div>
-
-    <p>ต้องเพิ่ม 2 column ในตาราง <span class="inline-code">orderprocessdetailfront</span> ก่อนใช้งานครั้งแรก</p>
-
-<pre><code>ALTER TABLE orderprocessdetailfront
-  ADD COLUMN ServingStaffID  INT      NOT NULL DEFAULT 0    AFTER FinishDateTime,
-  ADD COLUMN ServingDateTime DATETIME NULL     DEFAULT NULL AFTER ServingStaffID;</code></pre>
-
-    <div class="alert alert-info">
-      <span class="alert-ico">ℹ️</span>
-      <div>ถ้าเคยเพิ่มเป็น INT มาก่อน ต้องแปลงเป็น DATETIME ก่อน:<br>
-        <span class="inline-code">ALTER TABLE orderprocessdetailfront MODIFY ServingDateTime DATETIME NULL DEFAULT NULL;</span>
-      </div>
-    </div>
-
-    <h3>ตรวจสอบ column</h3>
-<pre><code>SHOW COLUMNS FROM orderprocessdetailfront LIKE 'Serving%';</code></pre>
-    <p>ควรเห็น ServingStaffID (int) และ ServingDateTime (datetime)</p>
   </div>
 
   <!-- LOGIN -->
