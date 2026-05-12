@@ -30,8 +30,7 @@ try {
                 CASE WHEN o.ServingDateTime IS NOT NULL THEN 1 ELSE 0 END AS ServeStatus
             FROM orderprocessdetailfront o
             WHERE o.ProcessStatus = 1
-              AND o.FinishDateTime >= CURDATE()
-              AND o.FinishDateTime <  CURDATE() + INTERVAL 1 DAY
+              AND o.FinishDateTime >= NOW() - INTERVAL 24 HOUR
             ORDER BY o.FinishDateTime ASC
         ";
         $result = $conn->query($sql);
@@ -57,8 +56,7 @@ try {
             SET ServingStaffID = ?, ServingDateTime = NOW()
             WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ? AND TableID = ?
               AND ProcessStatus = 1
-              AND FinishDateTime >= CURDATE()
-              AND FinishDateTime <  CURDATE() + INTERVAL 1 DAY
+              AND FinishDateTime >= NOW() - INTERVAL 24 HOUR
         ");
         $stmt->bind_param('iiiiii', $staff, $plid, $pid, $spid, $prid, $tbl);
         if (!$stmt->execute()) throw new Exception($stmt->error);
@@ -93,8 +91,7 @@ try {
             UPDATE orderprocessdetailfront
             SET ServingStaffID = ?, ServingDateTime = NOW()
             WHERE TableID = ? AND ProcessStatus = 1
-              AND FinishDateTime >= CURDATE()
-              AND FinishDateTime <  CURDATE() + INTERVAL 1 DAY
+              AND FinishDateTime >= NOW() - INTERVAL 24 HOUR
               AND ServingDateTime IS NULL
         ");
         $stmt->bind_param('ii', $staff, $tableId);
@@ -110,8 +107,7 @@ try {
             UPDATE orderprocessdetailfront
             SET ServingStaffID = 0, ServingDateTime = NULL
             WHERE TableID = ? AND ProcessStatus = 1
-              AND FinishDateTime >= CURDATE()
-              AND FinishDateTime <  CURDATE() + INTERVAL 1 DAY
+              AND FinishDateTime >= NOW() - INTERVAL 24 HOUR
               AND ServingDateTime IS NOT NULL
         ");
         $stmt->bind_param('i', $tableId);
