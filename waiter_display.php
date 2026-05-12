@@ -175,6 +175,18 @@ body{
 .m-item{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:3px;font-weight:700}
 .m-item b{color:var(--text);font-weight:700}
 
+/* SET DIVIDER */
+.set-divider{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:7px 14px;gap:10px;
+    background:linear-gradient(90deg,rgba(22,131,255,.08),transparent);
+    border-bottom:1px solid var(--line);
+    border-top:2px solid rgba(22,131,255,.15);
+}
+.set-divider:first-child{border-top:none}
+.set-label{font-size:12px;font-weight:800;color:var(--primary-deep);display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.set-qty{font-size:11px;font-weight:700;color:var(--primary);flex-shrink:0}
+
 /* ITEM ROW */
 .irow{
     display:flex;align-items:center;padding:11px 14px;gap:10px;
@@ -593,13 +605,26 @@ function buildCard(t, allowUnserve = false) {
   const t0  = t.earliest ? new Date(t.earliest.replace(' ', 'T')) : null;
   const ts  = t0 ? `${pad(t0.getHours())}:${pad(t0.getMinutes())}` : '--:--';
 
-  const items = t.rows.map(r => {
+  const items = sortItemsBySet(t.rows).map(r => {
     const srv = r.ServeStatus == 1;
     const key = rowKey(r);
+
+    // หัวเซ็ต → แสดงเป็น divider ไม่กดได้
+    if (r.ProductSetType == 7) {
+      const ft = r.FinishDateTime ? (() => {
+        const d = new Date(r.FinishDateTime.replace(' ', 'T'));
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      })() : '';
+      return `<div class="set-divider">
+        <div class="set-label">📦 ${esc(r.ProductName)}</div>
+        ${ft ? `<div class="i-time" style="margin-right:6px">🕐 ${ft}</div>` : ''}
+        <div class="set-qty">×${parseFloat(r.ProductAmount)}</div>
+      </div>`;
+    }
+
     let tag = '';
-    if      (r.ProductSetType ==  7) tag = `<span class="tag set">📦 เซต</span>`;
-    else if (r.ProductSetType <   0) tag = `<span class="tag sub">↳ ในเซต</span>`;
-    else if (r.ProductSetType == 15) tag = `<span class="tag add">➕ Add-on</span>`;
+    if      (parseInt(r.ProductSetType) < 0) tag = `<span class="tag sub">↳ ในเซต</span>`;
+    else if (r.ProductSetType == 15)          tag = `<span class="tag add">➕ Add-on</span>`;
 
     const ft = r.FinishDateTime ? (() => {
       const d = new Date(r.FinishDateTime.replace(' ', 'T'));
@@ -874,6 +899,29 @@ async function tapUnserveAll(tableId, tableName) {
 /* ============================================================
    HELPERS
 ============================================================ */
+/* จัดกลุ่มรายการ: standalone → แต่ละ set header + ลูก */
+function sortItemsBySet(rows) {
+  const setHeaders  = rows.filter(r => r.ProductSetType == 7);
+  if (!setHeaders.length) return rows;
+
+  const subItems    = rows.filter(r => parseInt(r.ProductSetType) < 0);
+  const standalones = rows.filter(r => r.ProductSetType != 7 && parseInt(r.ProductSetType) >= 0);
+
+  const result = [...standalones];
+  const placed  = new Set(standalones.map(r => r.ProductLevelID));
+
+  setHeaders.forEach(hdr => {
+    result.push(hdr);
+    placed.add(hdr.ProductLevelID);
+    subItems
+      .filter(s => s.ParentProcessID == hdr.ProcessID && !placed.has(s.ProductLevelID))
+      .forEach(s => { result.push(s); placed.add(s.ProductLevelID); });
+  });
+  // orphan sub-items ที่หาหัวไม่เจอ
+  subItems.filter(s => !placed.has(s.ProductLevelID)).forEach(s => result.push(s));
+  return result;
+}
+
 function rowKey(r) {
   return `${r.ProductLevelID}_${r.ProcessID}_${r.SubProcessID}_${r.PrinterID}_${r.TableID}`;
 }
