@@ -111,7 +111,6 @@ code{font-family:monospace}
       <a href="#tabs">หน้าจอหลัก</a>
       <a href="#serve">การเสิร์ฟ</a>
       <a href="#search">ค้นหาโต๊ะ</a>
-      <a href="#faq">คำถามที่พบบ่อย</a>
     </div>
   </div>
 
@@ -277,40 +276,6 @@ code{font-family:monospace}
       <tr><td style="color:#d97706;font-weight:700">สีเหลือง</td><td>เสิร์ฟบางส่วนแล้ว</td></tr>
       <tr><td style="color:#6b7a90;font-weight:700">สีเทา</td><td>เสิร์ฟครบแล้ว</td></tr>
     </table>
-  </div>
-
-  <!-- FAQ -->
-  <div class="sec" id="faq">
-    <div class="sec-title"><span class="ico">❓</span> คำถามที่พบบ่อย</div>
-
-    <h3>ไม่มีรายการแสดงขึ้นมาเลย</h3>
-    <p>ตรวจสอบตามลำดับ:</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body"><div class="step-title">เช็คว่า settings.local.php ชี้ไปที่ฐานข้อมูลถูกต้อง</div></div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body"><div class="step-title">เช็คว่ามี order ที่ checkout จาก KDS แล้ว (ProcessStatus=1) ในช่วง 24 ชั่วโมงที่ผ่านมา</div></div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body"><div class="step-title">เช็คว่า column ServingStaffID และ ServingDateTime ถูกสร้างแล้ว</div></div>
-      </div>
-    </div>
-
-    <h3>กดเสิร์ฟแล้วขึ้น "บันทึกไม่สำเร็จ"</h3>
-    <p>เกิดจาก network ขาดชั่วคราว — รายการจะ rollback กลับสถานะเดิมอัตโนมัติ กดใหม่ได้เลย ถ้าเกิดบ่อยให้ตรวจสอบสัญญาณ WiFi</p>
-
-    <h3>login หายทั้งที่ไม่ได้กด "ออก"</h3>
-    <p>browser ล้าง cache หรือ localStorage — login ใหม่ด้วยรหัสพนักงานได้เลย</p>
-
-    <h3>รายการแสดงไม่ตรงกับที่ครัวทำ</h3>
-    <p>ข้อมูลรีเฟรชทุก 30 วินาที — กดปุ่ม <strong>รีเฟรช</strong> ที่หัวหน้าจอเพื่ออัปเดตทันที</p>
-
-    <h3>โต๊ะที่รวมกัน (Merge) แสดงเป็น 2 การ์ด</h3>
-    <p>ระบบใช้ TableID ในการแยกโต๊ะ โต๊ะที่รวมกันจะยังแสดงแยกกันในหน้าจอนี้</p>
   </div>
 
   <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px">
