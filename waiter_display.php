@@ -220,8 +220,9 @@ body{
 }
 .irow.served .i-time{opacity:.5}
 .i-staff{
-    font-size:10px;font-weight:700;color:var(--success);
-    display:flex;align-items:center;gap:3px;margin-top:2px;
+    font-size:11px;font-weight:700;color:var(--success);
+    background:var(--success-soft);border:1px solid #bfeacc;
+    border-radius:6px;padding:2px 7px;flex-shrink:0;white-space:nowrap;
 }
 
 /* PROGRESS */
@@ -545,8 +546,8 @@ function buildCard(t, allowUnserve = false) {
       <div class="i-info">
         <div class="i-name">${esc(r.ProductName)}</div>
         ${tag ? `<div class="i-tags">${tag}</div>` : ''}
-        ${staffLabel}
       </div>
+      ${staffLabel}
       ${ft ? `<div class="i-time">🕐 ${ft}</div>` : ''}
       <div class="i-qty">×${parseFloat(r.ProductAmount)}</div>
     </div>`;
