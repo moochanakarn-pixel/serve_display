@@ -56,6 +56,15 @@ body{
 .clock{font-size:13px;font-weight:700;color:rgba(255,255,255,.9)}
 
 /* SUMMARY BAR */
+/* STICKY FILTER+SEARCH BAR */
+.sticky-bar{
+    position:sticky;top:56px;z-index:20;
+    background:linear-gradient(180deg,rgba(237,245,255,.98),rgba(237,245,255,.95));
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    padding-bottom:2px;
+}
+
 /* FILTER BAR */
 .fbar{display:flex;gap:6px;padding:6px 12px 4px;overflow-x:auto;scrollbar-width:none;max-width:1920px;margin:0 auto}
 .fbar::-webkit-scrollbar{display:none}
@@ -406,20 +415,21 @@ body{
 </div>
 
 
-<!-- FILTER -->
-<div class="fbar">
-  <button class="fbtn on" id="fb-wait"    onclick="setFilter('wait')">⏳ รอเสิร์ฟ <span class="cnt" id="fc-wait">-</span></button>
-  <button class="fbtn"    id="fb-done"    onclick="setFilter('done')">✅ เสิร์ฟแล้ว <span class="cnt" id="fc-done">-</span></button>
-  <button class="fbtn"    id="fb-kitchen" onclick="setFilter('kitchen')">🍳 อยู่ในครัว <span class="cnt" id="fc-kitchen">-</span></button>
-</div>
-<!-- SEARCH + TABLE CHIPS -->
-<div class="sbar">
-  <div class="sbar-wrap">
-    <span class="sbar-ico">🔍</span>
-    <input class="sbar-inp" id="searchInp" type="text" placeholder="ค้นหาโต๊ะ..." autocomplete="off" oninput="onSearch(this.value)">
-    <button class="sbar-clr" id="searchClr" onclick="clearSearch()">✕</button>
+<!-- STICKY FILTER + SEARCH -->
+<div class="sticky-bar">
+  <div class="fbar">
+    <button class="fbtn on" id="fb-wait"    onclick="setFilter('wait')">⏳ รอเสิร์ฟ <span class="cnt" id="fc-wait">-</span></button>
+    <button class="fbtn"    id="fb-done"    onclick="setFilter('done')">✅ เสิร์ฟแล้ว <span class="cnt" id="fc-done">-</span></button>
+    <button class="fbtn"    id="fb-kitchen" onclick="setFilter('kitchen')">🍳 อยู่ในครัว <span class="cnt" id="fc-kitchen">-</span></button>
   </div>
-  <div class="tchips" id="tchips"></div>
+  <div class="sbar">
+    <div class="sbar-wrap">
+      <span class="sbar-ico">🔍</span>
+      <input class="sbar-inp" id="searchInp" type="text" placeholder="ค้นหาโต๊ะ..." autocomplete="off" oninput="onSearch(this.value)">
+      <button class="sbar-clr" id="searchClr" onclick="clearSearch()">✕</button>
+    </div>
+    <div class="tchips" id="tchips"></div>
+  </div>
 </div>
 
 <div class="err-banner" id="errBanner"></div>
