@@ -38,6 +38,7 @@
 | `auth_check.php` | ตรวจสอบ authentication |
 | `settings.local.php` | ค่า DB และ local settings (ไม่ commit เข้า git) |
 | `manifest.json` | PWA manifest |
+| `manual.php` | คู่มือการใช้งานและการตั้งค่า (ภาษาไทย) |
 | `.gitignore` | ป้องกัน settings.local.php ถูก overwrite โดย git pull |
 
 ---
