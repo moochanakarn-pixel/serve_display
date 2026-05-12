@@ -178,6 +178,12 @@ body{
 .irow.locked{cursor:default}
 .irow.locked:active{background:transparent}
 
+/* ในหน้า "เสิร์ฟแล้ว" แสดงข้อความปกติ ไม่ต้องซีด+ขีดฆ่า */
+.view-done .irow.served{opacity:1}
+.view-done .irow.served .i-name{text-decoration:none;color:var(--text)}
+.view-done .irow.served .i-time{opacity:1}
+.view-done .irow.served .i-staff{opacity:1}
+
 .chk{
     width:28px;height:28px;flex-shrink:0;border-radius:8px;
     border:2px solid var(--line-strong);display:flex;align-items:center;justify-content:center;
@@ -660,6 +666,7 @@ function setFilter(f) {
   ['wait', 'done'].forEach(x =>
     document.getElementById('fb-' + x).classList.toggle('on', x === f)
   );
+  document.getElementById('main').classList.toggle('view-done', f === 'done');
   render();
 }
 
