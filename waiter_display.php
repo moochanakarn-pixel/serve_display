@@ -225,6 +225,34 @@ body{
     border-radius:6px;padding:2px 7px;flex-shrink:0;white-space:nowrap;
 }
 
+/* CONFIRM MODAL */
+.modal-backdrop{
+    position:fixed;inset:0;z-index:500;
+    background:rgba(10,30,60,.45);backdrop-filter:blur(3px);
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .18s;
+}
+.modal-backdrop.show{opacity:1;pointer-events:all}
+.modal-box{
+    background:#fff;border-radius:20px;padding:28px 24px 20px;
+    width:300px;max-width:90vw;box-shadow:0 24px 60px rgba(0,0,0,.22);
+    transform:scale(.92);transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+    text-align:center;
+}
+.modal-backdrop.show .modal-box{transform:scale(1)}
+.modal-ico{font-size:36px;margin-bottom:10px}
+.modal-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px}
+.modal-msg{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:20px}
+.modal-btns{display:flex;gap:8px}
+.modal-btn{
+    flex:1;padding:11px;border:none;border-radius:12px;
+    font-size:14px;font-weight:700;cursor:pointer;
+    font-family:Tahoma,Arial,sans-serif;transition:opacity .15s;
+}
+.modal-btn:active{opacity:.8}
+.modal-btn.cancel{background:var(--line);color:var(--muted)}
+.modal-btn.confirm{background:linear-gradient(135deg,var(--warning),#b45309);color:#fff}
+
 /* PROGRESS */
 .prog-wrap{padding:8px 14px 10px}
 .prog-track{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
@@ -399,6 +427,19 @@ body{
   <div class="loading"><div class="spinner"></div><span>กำลังโหลด...</span></div>
 </div>
 <div class="toast" id="toast"></div>
+
+<!-- CUSTOM CONFIRM MODAL -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-ico" id="modalIco">↩️</div>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-msg"  id="modalMsg"></div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel"  id="modalCancel">ยกเลิก</button>
+      <button class="modal-btn confirm" id="modalConfirm">ยืนยัน</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ============================================================
@@ -783,13 +824,15 @@ function jumpToTable(tableId) {
 
 /* ── confirm before unserve ── */
 async function confirmUnserve(key) {
-  if (!confirm('ยกเลิกการเสิร์ฟรายการนี้?')) return;
+  const ok = await showConfirm({ ico: '↩️', title: 'ยกเลิกการเสิร์ฟ?', msg: 'ต้องการยกเลิกรายการนี้ใช่ไหม', confirmLabel: 'ยกเลิกเสิร์ฟ' });
+  if (!ok) return;
   await tapItem(key);
 }
 
 async function tapUnserveAll(tableId, tableName) {
   if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
-  if (!confirm(`ยกเลิกเสิร์ฟทั้งโต๊ะ ${tableName}?`)) return;
+  const ok = await showConfirm({ ico: '↩️', title: `ยกเลิกเสิร์ฟโต๊ะ ${tableName}?`, msg: 'รายการที่เสิร์ฟแล้วทั้งหมดจะถูกยกเลิก', confirmLabel: 'ยกเลิกเสิร์ฟทั้งโต๊ะ' });
+  if (!ok) return;
   const lockKey = `untable_${tableId}`;
   if (pending.has(lockKey)) return;
   pending.add(lockKey);
@@ -825,6 +868,31 @@ function rowKey(r) {
 }
 function pad(n)  { return String(n).padStart(2, '0'); }
 function esc(s)  { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* CUSTOM CONFIRM */
+function showConfirm({ ico = '❓', title = '', msg = '', confirmLabel = 'ยืนยัน' } = {}) {
+  return new Promise(resolve => {
+    const backdrop = document.getElementById('confirmModal');
+    document.getElementById('modalIco').textContent     = ico;
+    document.getElementById('modalTitle').textContent   = title;
+    document.getElementById('modalMsg').textContent     = msg;
+    document.getElementById('modalConfirm').textContent = confirmLabel;
+    backdrop.classList.add('show');
+    const close = ok => {
+      backdrop.classList.remove('show');
+      btnOk.removeEventListener('click', onOk);
+      btnCancel.removeEventListener('click', onCancel);
+      resolve(ok);
+    };
+    const onOk     = () => close(true);
+    const onCancel = () => close(false);
+    const btnOk     = document.getElementById('modalConfirm');
+    const btnCancel = document.getElementById('modalCancel');
+    btnOk.addEventListener('click', onOk);
+    btnCancel.addEventListener('click', onCancel);
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); }, { once: true });
+  });
+}
 
 /* TOAST */
 let _tt;
