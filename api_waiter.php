@@ -32,7 +32,7 @@ try {
             FROM orderprocessdetailfront o
             LEFT JOIN staffs s ON s.StaffID = o.ServingStaffID AND o.ServingStaffID > 0
             WHERE o.ProcessStatus = 1
-              AND o.FinishDateTime >= NOW() - INTERVAL 24 HOUR
+              AND COALESCE(o.FinishDateTime, o.SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
             ORDER BY o.FinishDateTime ASC
         ";
         $result = $conn->query($sql);
@@ -84,7 +84,7 @@ try {
             SET ServingStaffID = ?, ServingDateTime = NOW()
             WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ? AND TableID = ?
               AND ProcessStatus = 1
-              AND FinishDateTime >= NOW() - INTERVAL 24 HOUR
+              AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
               AND ServingDateTime IS NULL
         ");
         $stmt->bind_param('iiiiii', $staff, $plid, $pid, $spid, $prid, $tbl);
@@ -105,7 +105,7 @@ try {
             SET ServingStaffID = 0, ServingDateTime = NULL
             WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ? AND TableID = ?
               AND ProcessStatus = 1
-              AND FinishDateTime >= NOW() - INTERVAL 24 HOUR
+              AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
         ");
         $stmt->bind_param('iiiii', $plid, $pid, $spid, $prid, $tbl);
         if (!$stmt->execute()) throw new Exception($stmt->error);
@@ -125,7 +125,7 @@ try {
             UPDATE orderprocessdetailfront
             SET ServingStaffID = ?, ServingDateTime = NOW()
             WHERE TableID = ? AND ProcessStatus = 1
-              AND FinishDateTime >= NOW() - INTERVAL 24 HOUR
+              AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
               AND ServingDateTime IS NULL
         ");
         $stmt->bind_param('ii', $staff, $tableId);
@@ -141,7 +141,7 @@ try {
             UPDATE orderprocessdetailfront
             SET ServingStaffID = 0, ServingDateTime = NULL
             WHERE TableID = ? AND ProcessStatus = 1
-              AND FinishDateTime >= NOW() - INTERVAL 24 HOUR
+              AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
               AND ServingDateTime IS NOT NULL
         ");
         $stmt->bind_param('i', $tableId);
