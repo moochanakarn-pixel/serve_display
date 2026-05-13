@@ -152,21 +152,32 @@ code{font-family:monospace}
     <div class="sec-title"><span class="ico">📱</span> หน้าจอหลัก</div>
 
     <h3>แถบกรอง (Filter Tabs)</h3>
-    <table>
-      <tr><th>แถบ</th><th>แสดงอะไร</th></tr>
-      <tr>
-        <td><span class="badge b-wait">⏳ รอเสิร์ฟ</span></td>
-        <td>โต๊ะที่มีรายการออกจากครัวแล้ว แต่ยังไม่ได้เสิร์ฟครบ — <strong>ใช้หน้านี้หลัก</strong></td>
-      </tr>
-      <tr>
-        <td><span class="badge b-done">✅ เสิร์ฟแล้ว</span></td>
-        <td>โต๊ะที่เสิร์ฟครบทุกรายการแล้ว ใช้ตรวจสอบย้อนหลัง</td>
-      </tr>
-      <tr>
-        <td><span class="badge b-cook">🍳 อยู่ในครัว</span></td>
-        <td>รายการที่ยังทำอยู่หรือรอทำในครัว — ดูได้อย่างเดียว แก้ไขไม่ได้</td>
-      </tr>
-    </table>
+
+    <div class="sec" style="background:#fffbeb;border-color:#fcd34d;margin-bottom:0;border-radius:12px 12px 0 0;padding:16px 20px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span class="badge b-wait" style="font-size:13px">⏳ รอเสิร์ฟ</span>
+        <span style="font-size:11px;font-weight:700;color:#92400e;background:#fef3c7;border-radius:999px;padding:2px 10px">หน้าหลัก</span>
+      </div>
+      <p style="margin:0;color:#78350f;font-size:13px">แสดงโต๊ะที่มีรายการ <strong>ออกจากครัวแล้ว แต่ยังไม่ได้เสิร์ฟครบ</strong> — พนักงานกดติ๊กรายการที่เสิร์ฟไปแล้วได้ที่นี่ โต๊ะที่เสิร์ฟครบทุกรายการจะหายออกไปเองและย้ายไปแถบ "เสิร์ฟแล้ว" อัตโนมัติ</p>
+    </div>
+    <div class="sec" style="background:#e6f8ee;border-color:#bfeacc;margin-bottom:0;border-radius:0;padding:16px 20px;border-top:none">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span class="badge b-done" style="font-size:13px">✅ เสิร์ฟแล้ว</span>
+      </div>
+      <p style="margin:0;color:#14532d;font-size:13px">แสดงโต๊ะที่ <strong>เสิร์ฟครบทุกรายการ</strong> แล้ว — ใช้ตรวจสอบย้อนหลังว่าใครเสิร์ฟรายการไหน เมื่อไหร่ ถ้าติ๊กผิดสามารถกดยกเลิกเสิร์ฟได้จากหน้านี้ทั้งทีละรายการหรือทั้งโต๊ะ</p>
+    </div>
+    <div class="sec" style="background:#fff7ed;border-color:#fed7aa;margin-bottom:16px;border-radius:0 0 12px 12px;padding:16px 20px;border-top:none">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span class="badge b-cook" style="font-size:13px">🍳 อยู่ในครัว</span>
+        <span style="font-size:11px;font-weight:700;color:#9a3412;background:#ffedd5;border-radius:999px;padding:2px 10px">ดูได้อย่างเดียว</span>
+      </div>
+      <p style="margin:0;color:#7c2d12;font-size:13px">แสดงรายการที่ <strong>ยังอยู่ในครัว ยังไม่ออกมา</strong> — แก้ไขอะไรไม่ได้ ใช้เช็คว่าโต๊ะไหนยังรอของจากครัวอยู่ ไม่ต้องวิ่งไปถามพ่อครัว</p>
+    </div>
+
+    <div style="background:#f0f6ff;border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--muted);margin-bottom:16px">
+      <strong style="color:var(--text)">ลำดับการไหลของออเดอร์</strong><br>
+      <span style="font-size:13px">🍳 อยู่ในครัว &nbsp;→&nbsp; ⏳ รอเสิร์ฟ &nbsp;→&nbsp; ✅ เสิร์ฟแล้ว</span>
+    </div>
 
     <h3>การ์ดโต๊ะ</h3>
     <div class="ui-card">
