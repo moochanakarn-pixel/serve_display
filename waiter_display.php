@@ -914,21 +914,21 @@ function sortItemsBySet(rows) {
   const standalones = rows.filter(r => r.ProductSetType != 7 && parseInt(r.ProductSetType) >= 0);
 
   const result = [...standalones];
-  const placed  = new Set(standalones.map(r => r.ProductLevelID));
+  const placed  = new Set(standalones.map(r => r.ProcessID));
 
   setHeaders.forEach(hdr => {
     result.push(hdr);
-    placed.add(hdr.ProductLevelID);
+    placed.add(hdr.ProcessID);
     subItems
-      .filter(s => s.ParentProcessID == hdr.ProcessID && !placed.has(s.ProductLevelID))
+      .filter(s => s.ParentProcessID == hdr.ProcessID && !placed.has(s.ProcessID))
       .forEach(s => {
         if (!s.FinishDateTime && hdr.FinishDateTime) s.FinishDateTime = hdr.FinishDateTime;
         result.push(s);
-        placed.add(s.ProductLevelID);
+        placed.add(s.ProcessID);
       });
   });
   // orphan sub-items ที่หาหัวไม่เจอ
-  subItems.filter(s => !placed.has(s.ProductLevelID)).forEach(s => result.push(s));
+  subItems.filter(s => !placed.has(s.ProcessID)).forEach(s => result.push(s));
   return result;
 }
 
