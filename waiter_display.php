@@ -921,7 +921,11 @@ function sortItemsBySet(rows) {
     placed.add(hdr.ProductLevelID);
     subItems
       .filter(s => s.ParentProcessID == hdr.ProcessID && !placed.has(s.ProductLevelID))
-      .forEach(s => { result.push(s); placed.add(s.ProductLevelID); });
+      .forEach(s => {
+        if (!s.FinishDateTime && hdr.FinishDateTime) s.FinishDateTime = hdr.FinishDateTime;
+        result.push(s);
+        placed.add(s.ProductLevelID);
+      });
   });
   // orphan sub-items ที่หาหัวไม่เจอ
   subItems.filter(s => !placed.has(s.ProductLevelID)).forEach(s => result.push(s));
