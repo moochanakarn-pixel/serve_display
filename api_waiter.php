@@ -45,7 +45,7 @@ try {
 
         // ดึงรายละเอียดรายการที่ยังอยู่ในครัว (ProcessStatus 0=รอทำ, 2=กำลังทำ)
         $cookSql = "
-            SELECT TableID,
+            SELECT TableID, ProcessID,
                    COALESCE(DisplayTableName, TableID) AS DisplayTableName,
                    ProductName, ProductAmount, ProductSetType, ParentProcessID,
                    ProcessStatus, SubmitOrderDateTime
@@ -60,8 +60,11 @@ try {
         $cooking     = [];
         while ($row = $cookResult->fetch_assoc()) {
             $cookingRows[] = $row;
-            $tid = (int)$row['TableID'];
-            $cooking[$tid] = ($cooking[$tid] ?? 0) + 1;
+            // นับเฉพาะ set header และ standalone ไม่นับ sub-item (ProductSetType < 0)
+            if ((int)$row['ProductSetType'] >= 0) {
+                $tid = (int)$row['TableID'];
+                $cooking[$tid] = ($cooking[$tid] ?? 0) + 1;
+            }
         }
 
         $conn->close();
@@ -94,11 +97,16 @@ try {
         jsonResponse(['success' => true]);
 
     } elseif ($action === 'unserve_item') {
-        $plid = (int)($_POST['ProductLevelID'] ?? 0);
-        $pid  = (int)($_POST['ProcessID']      ?? 0);
-        $spid = (int)($_POST['SubProcessID']   ?? 0);
-        $prid = (int)($_POST['PrinterID']      ?? 0);
-        $tbl  = (int)($_POST['TableID']        ?? 0);
+        $plid  = (int)($_POST['ProductLevelID'] ?? 0);
+        $pid   = (int)($_POST['ProcessID']      ?? 0);
+        $spid  = (int)($_POST['SubProcessID']   ?? 0);
+        $prid  = (int)($_POST['PrinterID']      ?? 0);
+        $tbl   = (int)($_POST['TableID']        ?? 0);
+        $staff = (int)($_POST['StaffID']        ?? 0);
+        if ($staff <= 0) {
+            $conn->close();
+            jsonResponse(['success' => false, 'message' => 'ต้องระบุ StaffID'], 400);
+        }
 
         $stmt = $conn->prepare("
             UPDATE orderprocessdetailfront
@@ -136,6 +144,11 @@ try {
 
     } elseif ($action === 'unserve_table') {
         $tableId = (int)($_POST['TableID'] ?? 0);
+        $staff   = (int)($_POST['StaffID'] ?? 0);
+        if ($staff <= 0) {
+            $conn->close();
+            jsonResponse(['success' => false, 'message' => 'ต้องระบุ StaffID'], 400);
+        }
 
         $stmt = $conn->prepare("
             UPDATE orderprocessdetailfront

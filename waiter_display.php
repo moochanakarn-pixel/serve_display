@@ -941,25 +941,27 @@ function esc(s)  { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'
 /* CUSTOM CONFIRM */
 function showConfirm({ ico = '❓', title = '', msg = '', confirmLabel = 'ยืนยัน' } = {}) {
   return new Promise(resolve => {
-    const backdrop = document.getElementById('confirmModal');
-    document.getElementById('modalIco').textContent     = ico;
-    document.getElementById('modalTitle').textContent   = title;
-    document.getElementById('modalMsg').textContent     = msg;
-    document.getElementById('modalConfirm').textContent = confirmLabel;
+    const backdrop  = document.getElementById('confirmModal');
+    const btnOk     = document.getElementById('modalConfirm');
+    const btnCancel = document.getElementById('modalCancel');
+    document.getElementById('modalIco').textContent   = ico;
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalMsg').textContent   = msg;
+    btnOk.textContent = confirmLabel;
     backdrop.classList.add('show');
     const close = ok => {
       backdrop.classList.remove('show');
       btnOk.removeEventListener('click', onOk);
       btnCancel.removeEventListener('click', onCancel);
+      backdrop.removeEventListener('click', onBackdrop);
       resolve(ok);
     };
-    const onOk     = () => close(true);
-    const onCancel = () => close(false);
-    const btnOk     = document.getElementById('modalConfirm');
-    const btnCancel = document.getElementById('modalCancel');
+    const onOk       = () => close(true);
+    const onCancel   = () => close(false);
+    const onBackdrop = e => { if (e.target === backdrop) close(false); };
     btnOk.addEventListener('click', onOk);
     btnCancel.addEventListener('click', onCancel);
-    backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); }, { once: true });
+    backdrop.addEventListener('click', onBackdrop);
   });
 }
 
