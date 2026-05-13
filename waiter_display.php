@@ -155,6 +155,7 @@ body{
     color:#fff;font-weight:800;font-size:14px;border-radius:8px;padding:4px 10px;
 }
 .tbl-name{font-weight:700;font-size:15px;color:var(--primary-deep)}
+.queue-badge{background:#f0f6ff;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--muted)}
 
 .pill{font-size:10px;font-weight:700;padding:4px 10px;border-radius:999px;display:flex;align-items:center;gap:4px;white-space:nowrap}
 .p-rdy{background:var(--success-soft);color:var(--success);border:1px solid #bfeacc}
@@ -519,6 +520,7 @@ function groupByTable(rows) {
     if (!map[k]) map[k] = {
       tableId:   r.TableID,
       tableName: r.DisplayTableName || String(r.TableID),
+      queueName: r.QueueName || '',
       earliest:  r.FinishDateTime || r.SubmitOrderDateTime || '',
       rows: []
     };
@@ -527,6 +529,7 @@ function groupByTable(rows) {
       map[k].tableName = r.DisplayTableName || String(r.TableID);
       map[k].earliest  = r.FinishDateTime;
     }
+    if (!map[k].queueName && r.QueueName) map[k].queueName = r.QueueName;
     map[k].rows.push(r);
   });
   return Object.values(map).sort((a,b) => {
@@ -663,6 +666,7 @@ function buildCard(t, allowUnserve = false) {
       <div class="tbl-badge">
         <div class="tbl-num">${esc(t.tableName)}</div>
         <div class="tbl-name">โต๊ะ ${esc(t.tableName)}</div>
+        ${t.queueName ? `<div class="queue-badge">🎫 ${esc(t.queueName)}</div>` : ''}
       </div>
       ${pill}
     </div>
