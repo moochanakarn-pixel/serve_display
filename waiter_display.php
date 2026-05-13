@@ -684,44 +684,79 @@ function buildCard(t, allowUnserve = false) {
 /* ============================================================
    ACTIONS — POST ไปที่ api_waiter.php
 ============================================================ */
+async function postServeRow(action, row) {
+  const fd = new FormData();
+  fd.append('action',         action);
+  fd.append('ProductLevelID', row.ProductLevelID);
+  fd.append('ProcessID',      row.ProcessID);
+  fd.append('SubProcessID',   row.SubProcessID);
+  fd.append('PrinterID',      row.PrinterID);
+  fd.append('TableID',        row.TableID);
+  fd.append('StaffID',        STAFF_ID);
+  const res  = await fetch(API, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message);
+}
+
 async function tapItem(key) {
   if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
+  if (pending.has(key)) return;
+
   const r = rawRows.find(r => rowKey(r) === key);
   if (!r) return;
 
-  if (pending.has(key)) return;
-  pending.add(key);
-
   const wasServed = r.ServeStatus == 1;
-  const action    = wasServed ? 'unserve_item' : 'serve_item';
   const newStatus = wasServed ? 0 : 1;
+  const action    = wasServed ? 'unserve_item' : 'serve_item';
+  const isHeader  = r.ProductSetType == 7;
 
-  // Optimistic — อัปเดตเฉพาะรายการที่คลิก
-  r.ServeStatus      = newStatus;
-  r.ServingStaffName = wasServed ? '' : STAFF_NAME;
+  // ถ้าเป็นหัวเซ็ต รวม sub-item ที่ยังไม่อยู่ใน target state ด้วย
+  const targets = [r];
+  if (isHeader) {
+    rawRows
+      .filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus != newStatus)
+      .forEach(s => targets.push(s));
+  }
+
+  // lock ทุก target
+  targets.forEach(t => pending.add(rowKey(t)));
+
+  // บันทึกสถานะเดิมไว้ rollback
+  const saved = targets.map(t => ({ t, status: t.ServeStatus, name: t.ServingStaffName }));
+
+  // Optimistic update
+  targets.forEach(t => {
+    t.ServeStatus      = newStatus;
+    t.ServingStaffName = wasServed ? '' : STAFF_NAME;
+  });
   tables = groupByTable(rawRows);
   render();
   toast(wasServed ? '↩️ ยกเลิกติ๊ก' : '✅ ติ๊กเสิร์ฟแล้ว');
 
   try {
-    const fd = new FormData();
-    fd.append('action',         action);
-    fd.append('ProductLevelID', r.ProductLevelID);
-    fd.append('ProcessID',      r.ProcessID);
-    fd.append('SubProcessID',   r.SubProcessID);
-    fd.append('PrinterID',      r.PrinterID);
-    fd.append('TableID',        r.TableID);
-    fd.append('StaffID',        STAFF_ID);
-    const res  = await fetch(API, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.message);
+    await Promise.all(targets.map(t => postServeRow(action, t)));
+
+    // Part B: sub-item ครบ → auto-serve header
+    if (!isHeader && !wasServed && r.ParentProcessID && r.ParentProcessID != '0') {
+      const hdr = rawRows.find(h => h.ProcessID == r.ParentProcessID && h.ProductSetType == 7);
+      if (hdr && hdr.ServeStatus != 1) {
+        const siblings = rawRows.filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == hdr.ProcessID);
+        if (siblings.every(s => s.ServeStatus == 1)) {
+          hdr.ServeStatus      = 1;
+          hdr.ServingStaffName = STAFF_NAME;
+          tables = groupByTable(rawRows);
+          render();
+          await postServeRow('serve_item', hdr);
+        }
+      }
+    }
   } catch (e) {
-    r.ServeStatus = wasServed ? 1 : 0;
+    saved.forEach(({ t, status, name }) => { t.ServeStatus = status; t.ServingStaffName = name; });
     tables = groupByTable(rawRows);
     render();
     toast('⚠️ บันทึกไม่สำเร็จ', true);
   } finally {
-    pending.delete(key);
+    targets.forEach(t => pending.delete(rowKey(t)));
   }
 }
 
