@@ -185,6 +185,7 @@ body{
 .set-divider.served .set-label{text-decoration:line-through;color:var(--muted)}
 .view-done .set-divider.served .set-label{text-decoration:none;color:var(--primary-deep)}
 .set-qty{font-size:11px;font-weight:700;color:var(--primary);flex-shrink:0}
+.set-pid{font-size:10px;font-weight:700;color:var(--muted);font-family:monospace;flex-shrink:0;opacity:.7}
 
 /* ITEM ROW */
 .irow{
@@ -620,6 +621,7 @@ function buildCard(t, allowUnserve = false) {
       const onclick = srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`;
       return `<div class="set-divider${srv ? ' served' : ''}" data-key="${key}" ${onclick}>
         <div class="set-label">📦 ${esc(r.ProductName)}</div>
+        <div class="set-pid">#${String(r.ProcessID).padStart(6,'0')}</div>
         ${ft ? `<div class="i-time" style="margin-right:6px">🕐 ${ft}</div>` : ''}
         <div class="set-qty">×${parseFloat(r.ProductAmount)}</div>
       </div>`;
