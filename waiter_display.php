@@ -608,7 +608,18 @@ function buildCard(t, allowUnserve = false) {
   const t0  = t.earliest ? new Date(t.earliest.replace(' ', 'T')) : null;
   const ts  = t0 ? `${pad(t0.getHours())}:${pad(t0.getMinutes())}` : '--:--';
 
-  const items = sortItemsBySet(t.rows).map(r => {
+  // wait tab: ซ่อนรายการที่เสิร์ฟแล้ว — set header แสดงเฉพาะเมื่อยังมี sub-item ค้าง
+  const visibleRows = allowUnserve
+    ? sortItemsBySet(t.rows)
+    : sortItemsBySet(t.rows).filter(r => {
+        if (r.ProductSetType == 7) {
+          const hasPending = t.rows.some(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus == 0);
+          return r.ServeStatus == 0 || hasPending;
+        }
+        return r.ServeStatus == 0;
+      });
+
+  const items = visibleRows.map(r => {
     const srv = r.ServeStatus == 1;
     const key = rowKey(r);
 
