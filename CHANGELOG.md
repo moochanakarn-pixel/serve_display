@@ -1,5 +1,34 @@
 # Serve Display — Changelog
 
+## v1.1.0 (2026-05-14)
+
+### ฟีเจอร์ใหม่
+
+| ฟีเจอร์ | รายละเอียด |
+|---|---|
+| ซ่อนรายการที่เสิร์ฟแล้วในแท็บ รอเสิร์ฟ | รายการที่ติ๊กแล้วจะหายไปจากแท็บ รอเสิร์ฟ ทันที |
+| แท็บ เสิร์ฟแล้ว แสดงทุกโต๊ะที่มีรายการเสิร์ฟ | ไม่ต้องรอให้ครบทุกรายการในโต๊ะก่อน — มีบางรายการเสิร์ฟแล้วก็ขึ้น |
+| Cascade click บน set header | คลิกที่ set header → ติ๊ก/ยกเลิกติ๊ก sub-item ทุกรายการในกลุ่มพร้อมกัน |
+| Auto-serve header | เมื่อ sub-item ทุกตัวในกลุ่มถูกติ๊กครบ → ตัวหัวเซ็ตจะโดนติ๊กตามอัตโนมัติ |
+| แสดงหมายเลขคิว (QueueName) | badge 🎫 ชื่อคิวในหัวการ์ดแต่ละโต๊ะ — ตรงกับจอ Checker |
+| แสดง ProcessID บน set-divider | `#000042` ใต้ชื่อเซ็ต ใช้อ้างอิงกับจอ KDS ในครัว |
+
+---
+
+### บัคที่แก้ไขใน v1.1.0
+
+| # | บัค | การแก้ |
+|---|---|---|
+| 16 | sub-item (ProductSetType < 0) ไม่แสดงในจอเสิร์ฟ (1) | COALESCE(FinishDateTime, SubmitOrderDateTime) ใน WHERE filter ครอบ sub-item ที่ไม่มี FinishDateTime |
+| 17 | sub-item ไม่แสดงในจอเสิร์ฟ (2) | `placed` Set ใน sortItemsBySet ใช้ ProductLevelID ที่ซ้ำกัน (price tier) แก้เป็น ProcessID |
+| 18 | การจัดกลุ่ม sub-item ในแท็บ อยู่ในครัว พัง | cookSql ขาด ProcessID column — เพิ่มเข้าไปใน SELECT |
+| 19 | จำนวนรายการในครัว (cooking badge) นับ sub-item ซ้ำ | กรองเฉพาะ ProductSetType >= 0 ก่อนนับ |
+| 20 | backdrop modal ทำงานได้แค่ครั้งเดียว | เปลี่ยนจาก `{once:true}` เป็น named function + removeEventListener ใน close() |
+| 21 | unserve_item / unserve_table ไม่ตรวจสอบ StaffID | เพิ่ม if ($staff <= 0) return 400 ทั้งสอง action |
+| 22 | FinishDateTime ของ sub-item เป็น NULL ทำให้เวลาแสดงผิด | สืบทอด FinishDateTime จาก set header ลงมาใน sortItemsBySet |
+
+---
+
 ## v1.0.0-beta (2026-05-12)
 
 หน้าจอสำหรับพนักงานเสิร์ฟ ใช้คู่กับระบบ KDS ในครัว  
