@@ -545,8 +545,8 @@ function groupByTable(rows) {
    RENDER
 ============================================================ */
 function render() {
-  const nW = tables.filter(t => t.rows.some(r  => r.ServeStatus == 0)).length;
-  const nD = tables.filter(t => t.rows.every(r => r.ServeStatus == 1)).length;
+  const nW = tables.filter(t => t.rows.some(r => r.ServeStatus == 0)).length;
+  const nD = tables.filter(t => t.rows.some(r => r.ServeStatus == 1)).length;
   const nK = Object.keys(cooking).length;
   document.getElementById('fc-wait').textContent    = nW;
   document.getElementById('fc-done').textContent    = nD;
@@ -574,7 +574,7 @@ function render() {
 
   // wait / done tabs
   let shown = tables.filter(t => t.rows.some(r => r.ServeStatus == 0));
-  if (filter === 'done') shown = tables.filter(t => t.rows.every(r => r.ServeStatus == 1));
+  if (filter === 'done') shown = tables.filter(t => t.rows.some(r => r.ServeStatus == 1));
   if (search) {
     const q = search.toLowerCase();
     shown = shown.filter(t => String(t.tableName).toLowerCase().includes(q) || String(t.tableId).includes(q));
@@ -582,7 +582,7 @@ function render() {
 
   if (!shown.length) {
     const emptyMsg = filter === 'done'
-      ? { ico: '📋', h: 'ยังไม่มีโต๊ะที่เสิร์ฟครบ', p: '' }
+      ? { ico: '📋', h: 'ยังไม่มีรายการที่เสิร์ฟแล้ว', p: '' }
       : { ico: '🎉', h: 'เสิร์ฟครบทุกโต๊ะแล้ว!', p: 'ไม่มีรายการค้าง 👍' };
     el.innerHTML = `<div class="empty"><div class="ico">${emptyMsg.ico}</div><h3>${emptyMsg.h}</h3><p>${emptyMsg.p}</p></div>`;
     return;
@@ -608,16 +608,19 @@ function buildCard(t, allowUnserve = false) {
   const t0  = t.earliest ? new Date(t.earliest.replace(' ', 'T')) : null;
   const ts  = t0 ? `${pad(t0.getHours())}:${pad(t0.getMinutes())}` : '--:--';
 
-  // wait tab: ซ่อนรายการที่เสิร์ฟแล้ว — set header แสดงเฉพาะเมื่อยังมี sub-item ค้าง
-  const visibleRows = allowUnserve
-    ? sortItemsBySet(t.rows)
-    : sortItemsBySet(t.rows).filter(r => {
-        if (r.ProductSetType == 7) {
-          const hasPending = t.rows.some(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus == 0);
-          return r.ServeStatus == 0 || hasPending;
-        }
-        return r.ServeStatus == 0;
-      });
+  // wait tab: แสดงเฉพาะที่ยังไม่เสิร์ฟ / done tab: แสดงเฉพาะที่เสิร์ฟแล้ว
+  // set header แสดงเมื่อมี sub-item ในฝั่งนั้นๆ อยู่
+  const visibleRows = sortItemsBySet(t.rows).filter(r => {
+    if (r.ProductSetType == 7) {
+      if (allowUnserve) {
+        return t.rows.some(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus == 1)
+            || r.ServeStatus == 1;
+      }
+      return t.rows.some(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus == 0)
+          || r.ServeStatus == 0;
+    }
+    return allowUnserve ? r.ServeStatus == 1 : r.ServeStatus == 0;
+  });
 
   const items = visibleRows.map(r => {
     const srv = r.ServeStatus == 1;
