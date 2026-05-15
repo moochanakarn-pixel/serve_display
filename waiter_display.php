@@ -502,11 +502,11 @@ function applyNonKds(rows) {
       r.ServeStatus = 1;
     }
   });
-  // Pass 2: set header ที่ sub-item ทุกตัวเสิร์ฟแล้ว (จริง + virtual) → auto-tick header
+  // Pass 2: set header ที่ sub-item ทุกตัวเสิร์ฟแล้ว (จริง + virtual) → ServeStatus=1
+  // ไม่ set _nonKds เพราะ header อาจเป็นของ station นี้เอง (ยังกดได้)
   rows.filter(r => r.ProductSetType == 7 && r.ServeStatus != 1).forEach(hdr => {
     const subs = rows.filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == hdr.ProcessID);
     if (subs.length > 0 && subs.every(s => s.ServeStatus == 1)) {
-      hdr._nonKds     = true;
       hdr.ServeStatus = 1;
     }
   });
@@ -763,11 +763,11 @@ async function tapItem(key) {
   const action    = wasServed ? 'unserve_item' : 'serve_item';
   const isHeader  = r.ProductSetType == 7;
 
-  // ถ้าเป็นหัวเซ็ต รวม sub-item ที่ยังไม่อยู่ใน target state ด้วย
+  // ถ้าเป็นหัวเซ็ต รวม sub-item ที่ยังไม่อยู่ใน target state ด้วย (ยกเว้น nonKds)
   const targets = [r];
   if (isHeader) {
     rawRows
-      .filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus != newStatus)
+      .filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus != newStatus && !s._nonKds)
       .forEach(s => targets.push(s));
   }
 
@@ -924,7 +924,7 @@ function renderChips() {
   if (filter === 'kitchen') {
     src = groupByTable(cookingRows).map(t => ({ ...t, _kitchen: true }));
   } else if (filter === 'done') {
-    src = tables.filter(t => t.rows.every(r => r.ServeStatus == 1));
+    src = tables.filter(t => t.rows.some(r => r.ServeStatus == 1));
   } else {
     src = tables.filter(t => t.rows.some(r => r.ServeStatus == 0));
   }
@@ -971,7 +971,7 @@ async function tapUnserveAll(tableId, tableName) {
   const t = tables.find(t => t.tableId == tableId);
   if (!t) { pending.delete(lockKey); return; }
 
-  t.rows.forEach(r => r.ServeStatus = 0);
+  t.rows.forEach(r => { if (!r._nonKds) r.ServeStatus = 0; });
   tables = groupByTable(rawRows);
   render();
 
