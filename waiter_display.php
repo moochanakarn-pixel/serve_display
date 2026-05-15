@@ -186,6 +186,11 @@ body{
 .view-done .set-divider.served .set-label{text-decoration:none;color:var(--primary-deep)}
 .set-qty{font-size:11px;font-weight:700;color:var(--primary);flex-shrink:0}
 .set-pid{font-size:10px;font-weight:700;color:var(--muted);font-family:monospace;flex-shrink:0;opacity:.7}
+.nonkds-badge{font-size:10px;font-weight:600;color:#6b7280;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:1px 7px;flex-shrink:0}
+.irow.nonkds{cursor:default;opacity:.55}
+.irow.nonkds:active{background:transparent}
+.set-divider.nonkds{cursor:default;opacity:.5}
+.set-divider.nonkds:active{background:transparent}
 
 /* ITEM ROW */
 .irow{
@@ -475,14 +480,37 @@ let   STAFF_ID    = 0;
 let   STAFF_NAME  = '';
 
 /* ── state ── */
-let tables      = [];
-let rawRows     = [];
-let cooking     = {}; // {TableID: stillCookingCount}
-let cookingRows = []; // full rows for kitchen tab
-let filter      = 'wait';
-let search      = '';
-let timer       = null;
+let tables         = [];
+let rawRows        = [];
+let cooking        = {}; // {TableID: stillCookingCount}
+let cookingRows    = []; // full rows for kitchen tab
+let filter         = 'wait';
+let search         = '';
+let timer          = null;
+let allowedPrinters = new Set(); // PrinterID ที่ station นี้ดูแล; ว่าง = ไม่กรอง
 const pending = new Set(); // rowKey ที่กำลัง POST อยู่
+
+/* ============================================================
+   NONKDS — รายการของ station อื่น → virtual ServeStatus=1
+============================================================ */
+function applyNonKds(rows) {
+  if (!allowedPrinters.size) return; // ไม่ได้ config → ไม่กรอง
+  // Pass 1: mark แต่ละ row ที่ PrinterID ไม่ใช่ของ station นี้
+  rows.forEach(r => {
+    if (!allowedPrinters.has(parseInt(r.PrinterID, 10))) {
+      r._nonKds     = true;
+      r.ServeStatus = 1;
+    }
+  });
+  // Pass 2: set header ที่ sub-item ทุกตัวเสิร์ฟแล้ว (จริง + virtual) → auto-tick header
+  rows.filter(r => r.ProductSetType == 7 && r.ServeStatus != 1).forEach(hdr => {
+    const subs = rows.filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == hdr.ProcessID);
+    if (subs.length > 0 && subs.every(s => s.ServeStatus == 1)) {
+      hdr._nonKds     = true;
+      hdr.ServeStatus = 1;
+    }
+  });
+}
 
 /* ============================================================
    LOAD จาก api_waiter.php
@@ -498,7 +526,9 @@ async function loadData() {
 
     if (!json.success) throw new Error(json.message || 'API error');
 
-    rawRows      = json.rows;
+    allowedPrinters = new Set((json.allowed_printer_ids || []).map(Number));
+    rawRows         = json.rows;
+    applyNonKds(rawRows);
     cooking      = json.cooking      || {};
     cookingRows  = json.cooking_rows || [];
     tables       = groupByTable(rawRows);
@@ -626,18 +656,18 @@ function buildCard(t, allowUnserve = false) {
     const srv = r.ServeStatus == 1;
     const key = rowKey(r);
 
-    // หัวเซ็ต → แสดงเป็น divider ไม่กดได้
+    // หัวเซ็ต → แสดงเป็น divider
     if (r.ProductSetType == 7) {
       const ft = r.FinishDateTime ? (() => {
         const d = new Date(r.FinishDateTime.replace(' ', 'T'));
         return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
       })() : '';
-      const onclick = srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`;
-      return `<div class="set-divider${srv ? ' served' : ''}" data-key="${key}" ${onclick}>
+      const onclick = r._nonKds ? '' : (srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`);
+      return `<div class="set-divider${srv ? ' served' : ''}${r._nonKds ? ' nonkds' : ''}" data-key="${key}" ${onclick}>
         <div class="set-label">📦 ${esc(r.ProductName)}</div>
         <div class="set-pid">#${String(r.ProcessID).padStart(6,'0')}</div>
         ${ft ? `<div class="i-time" style="margin-right:6px">🕐 ${ft}</div>` : ''}
-        <div class="set-qty">×${parseFloat(r.ProductAmount)}</div>
+        ${r._nonKds ? `<span class="nonkds-badge">ครัวอื่น</span>` : `<div class="set-qty">×${parseFloat(r.ProductAmount)}</div>`}
       </div>`;
     }
 
@@ -649,9 +679,11 @@ function buildCard(t, allowUnserve = false) {
       const d = new Date(r.FinishDateTime.replace(' ', 'T'));
       return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     })() : '';
-    const staffLabel = (srv && r.ServingStaffName) ? `<div class="i-staff">👤 ${esc(r.ServingStaffName)}</div>` : '';
-    const onclick = srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`;
-    return `<div class="irow${srv ? ' served' : ''}" data-key="${key}" ${onclick}>
+    const staffLabel = r._nonKds
+      ? `<span class="nonkds-badge">ครัวอื่น</span>`
+      : (srv && r.ServingStaffName) ? `<div class="i-staff">👤 ${esc(r.ServingStaffName)}</div>` : '';
+    const onclick = r._nonKds ? '' : (srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`);
+    return `<div class="irow${srv ? ' served' : ''}${r._nonKds ? ' nonkds' : ''}" data-key="${key}" ${onclick}>
       <div class="chk">
         <svg class="chk-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
@@ -724,6 +756,7 @@ async function tapItem(key) {
 
   const r = rawRows.find(r => rowKey(r) === key);
   if (!r) return;
+  if (r._nonKds) return; // รายการของครัวอื่น — ไม่สามารถแก้ได้
 
   const wasServed = r.ServeStatus == 1;
   const newStatus = wasServed ? 0 : 1;
@@ -921,6 +954,8 @@ function jumpToTable(tableId) {
 /* ── confirm before unserve ── */
 async function confirmUnserve(key) {
   if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
+  const r = rawRows.find(r => rowKey(r) === key);
+  if (r && r._nonKds) return; // รายการของครัวอื่น — ไม่สามารถยกเลิกได้
   const ok = await showConfirm({ ico: '↩️', title: 'ยกเลิกการเสิร์ฟ?', msg: 'ต้องการยกเลิกรายการนี้ใช่ไหม', confirmLabel: 'ยกเลิกเสิร์ฟ' });
   if (!ok) return;
   await tapItem(key);

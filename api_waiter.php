@@ -69,8 +69,22 @@ try {
             }
         }
 
+        // ดึง PrinterID ที่ station นี้ดูแล (จาก checkeraccessprinter)
+        $allowedPrinterIds = [];
+        if (CURRENT_COMPUTER_ID > 0) {
+            $cid   = CURRENT_COMPUTER_ID;
+            $pStmt = $conn->prepare("SELECT PrinterID FROM checkeraccessprinter WHERE ComputerID = ?");
+            $pStmt->bind_param('i', $cid);
+            $pStmt->execute();
+            $pStmt->bind_result($pid);
+            while ($pStmt->fetch()) {
+                $allowedPrinterIds[] = (int)$pid;
+            }
+            $pStmt->close();
+        }
+
         $conn->close();
-        jsonResponse(['success' => true, 'rows' => $rows, 'cooking' => $cooking, 'cooking_rows' => $cookingRows]);
+        jsonResponse(['success' => true, 'rows' => $rows, 'cooking' => $cooking, 'cooking_rows' => $cookingRows, 'allowed_printer_ids' => $allowedPrinterIds]);
 
     } elseif ($action === 'serve_item') {
         $plid  = (int)($_POST['ProductLevelID'] ?? 0);
