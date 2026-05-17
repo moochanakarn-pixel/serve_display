@@ -7,6 +7,51 @@ require_once __DIR__ . '/auth_check.php';
 
 $action = isset($_REQUEST['action']) ? trim((string)$_REQUEST['action']) : '';
 
+/* ── Settings actions ทำงานได้แม้ DB ยังไม่ connect ── */
+if ($action === 'get_settings') {
+    $s  = getLocalSettings();
+    $db = [];
+    try { $db = getDbConfig(); } catch (Exception $e) {}
+    jsonResponse([
+        'success'              => true,
+        'db_host'              => $db['host']              ?? '',
+        'db_port'              => $db['port']              ?? 3306,
+        'db_name'              => $db['name']              ?? '',
+        'db_user'              => $db['user']              ?? '',
+        'has_pass'             => !empty($db['pass']),
+        'current_computer_id'  => CURRENT_COMPUTER_ID,
+        'current_computer_name'=> CURRENT_COMPUTER_NAME,
+        'sound_enabled'        => (int)localSetting($s, 'sound_enabled', 0),
+        'version'              => 'v1.1.0',
+    ]);
+}
+
+if ($action === 'save_settings') {
+    $file    = getSettingsLocalFilePath();
+    $existing = getLocalSettings();
+    if (!is_array($existing)) $existing = [];
+
+    $updated = $existing;
+    $strFields = ['db_host', 'db_name', 'db_user', 'current_computer_name'];
+    $intFields = ['db_port', 'current_computer_id', 'sound_enabled'];
+    foreach ($strFields as $k) {
+        if (isset($_POST[$k])) $updated[$k] = trim((string)$_POST[$k]);
+    }
+    foreach ($intFields as $k) {
+        if (isset($_POST[$k])) $updated[$k] = (int)$_POST[$k];
+    }
+    // อัปเดต password เฉพาะเมื่อไม่ว่าง
+    if (!empty($_POST['db_pass'])) {
+        $updated['db_pass'] = (string)$_POST['db_pass'];
+    }
+
+    $php = "<?php\nreturn " . var_export($updated, true) . ";\n";
+    if (@file_put_contents($file, $php) === false) {
+        jsonResponse(['success' => false, 'message' => 'ไม่สามารถเขียน settings.local.php ได้ — ตรวจสอบ permission'], 500);
+    }
+    jsonResponse(['success' => true]);
+}
+
 try {
     $conn = getDbConnection();
 

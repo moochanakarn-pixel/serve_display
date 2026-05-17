@@ -384,6 +384,53 @@ body{
 .login-btn:active{opacity:.85}
 .login-btn:disabled{opacity:.5;cursor:not-allowed}
 .login-err{color:var(--danger);font-size:12px;font-weight:700;margin-top:10px;min-height:18px}
+
+/* ── SETTINGS MODAL ── */
+.settings-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.settings-backdrop.show{opacity:1;pointer-events:all}
+.settings-box{background:#fff;border-radius:18px;width:min(440px,95vw);max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.28);display:flex;flex-direction:column}
+.settings-head{padding:18px 20px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:#fff;z-index:1}
+.settings-head-ico{font-size:22px}
+.settings-head-title{font-size:16px;font-weight:800;color:var(--text);flex:1}
+.settings-head-ver{font-size:11px;color:var(--muted);font-family:monospace}
+.settings-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:6px}
+.settings-close:hover{background:var(--surface-soft)}
+.settings-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:18px}
+.s-section{}
+.s-section-title{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--primary);margin-bottom:10px;padding-bottom:5px;border-bottom:2px solid var(--primary-pale,#e8f0fe)}
+.s-row{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.s-row:last-child{margin-bottom:0}
+.s-label{font-size:12px;font-weight:700;color:var(--muted)}
+.s-input{border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;width:100%;box-sizing:border-box}
+.s-input:focus{border-color:var(--primary)}
+.s-row-inline{display:flex;gap:8px}
+.s-row-inline .s-input{flex:1}
+.s-pass-wrap{position:relative}
+.s-pass-wrap .s-input{padding-right:70px}
+.s-pass-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:11px;font-weight:700;color:var(--primary);cursor:pointer;padding:2px 4px}
+.s-select{border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;background:#fff;width:100%;box-sizing:border-box}
+.s-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+.s-toggle-label{font-size:13px;color:var(--text)}
+.s-toggle{position:relative;width:42px;height:24px;flex-shrink:0}
+.s-toggle input{opacity:0;width:0;height:0;position:absolute}
+.s-toggle-track{position:absolute;inset:0;background:#ccc;border-radius:999px;transition:background .2s;cursor:pointer}
+.s-toggle input:checked + .s-toggle-track{background:var(--primary)}
+.s-toggle-track::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.s-toggle input:checked + .s-toggle-track::after{transform:translateX(18px)}
+.s-info-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px}
+.s-info-key{color:var(--muted);font-weight:700}
+.s-info-val{color:var(--text);font-family:monospace;word-break:break-all}
+.settings-foot{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px;position:sticky;bottom:0;background:#fff}
+.s-btn{flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;transition:opacity .15s}
+.s-btn:active{opacity:.8}
+.s-btn-cancel{background:var(--surface-soft);color:var(--muted)}
+.s-btn-save{background:var(--primary);color:#fff}
+.s-btn-save:disabled{opacity:.5;cursor:not-allowed}
+.s-msg{font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px;margin-top:6px;display:none}
+.s-msg.ok{background:#dcfce7;color:#15803d;display:block}
+.s-msg.err{background:#fee2e2;color:#b91c1c;display:block}
+.logo-tap-hint{outline:2px solid var(--primary);outline-offset:3px;border-radius:8px;animation:logo-tap-flash .3s ease}
+@keyframes logo-tap-flash{0%{opacity:.5}100%{opacity:1}}
 </style>
 </head>
 <body>
@@ -402,7 +449,7 @@ body{
 
 <!-- HEADER -->
 <div class="hdr">
-  <div class="hdr-l">
+  <div class="hdr-l" id="hdrLogo" title="กดสามครั้งเพื่อตั้งค่า">
     <div class="hdr-icon">🍽️</div>
     <div>
       <div class="hdr-title">เสิร์ฟอาหาร</div>
@@ -456,6 +503,94 @@ body{
 <div class="toast" id="toast"></div>
 
 <!-- CUSTOM CONFIRM MODAL -->
+<!-- SETTINGS MODAL -->
+<div class="settings-backdrop" id="settingsModal">
+  <div class="settings-box">
+    <div class="settings-head">
+      <div class="settings-head-ico">⚙️</div>
+      <div class="settings-head-title">ตั้งค่าโปรแกรม</div>
+      <span class="settings-head-ver" id="sVerBadge">v1.1.0</span>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-body">
+
+      <div class="s-section">
+        <div class="s-section-title">ฐานข้อมูล</div>
+        <div class="s-row">
+          <div class="s-label">Host / IP Address</div>
+          <input class="s-input" id="s-db-host" type="text" placeholder="127.0.0.1" autocomplete="off">
+        </div>
+        <div class="s-row-inline">
+          <div class="s-row" style="flex:3">
+            <div class="s-label">ชื่อฐานข้อมูล</div>
+            <input class="s-input" id="s-db-name" type="text" placeholder="database_name" autocomplete="off">
+          </div>
+          <div class="s-row" style="flex:1">
+            <div class="s-label">Port</div>
+            <input class="s-input" id="s-db-port" type="number" placeholder="3306" min="1" max="65535">
+          </div>
+        </div>
+        <div class="s-row">
+          <div class="s-label">Username</div>
+          <input class="s-input" id="s-db-user" type="text" placeholder="root" autocomplete="off">
+        </div>
+        <div class="s-row">
+          <div class="s-label">Password <span style="font-weight:400;color:var(--muted)">(เว้นว่างไว้เพื่อคงค่าเดิม)</span></div>
+          <div class="s-pass-wrap">
+            <input class="s-input" id="s-db-pass" type="password" placeholder="••••••••" autocomplete="new-password">
+            <button class="s-pass-toggle" type="button" onclick="togglePass()">แสดง</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="s-section">
+        <div class="s-section-title">สถานี</div>
+        <div class="s-row-inline">
+          <div class="s-row" style="flex:1">
+            <div class="s-label">Computer ID</div>
+            <input class="s-input" id="s-computer-id" type="number" placeholder="1" min="0">
+          </div>
+          <div class="s-row" style="flex:2">
+            <div class="s-label">ชื่อสถานี</div>
+            <input class="s-input" id="s-computer-name" type="text" placeholder="Serve 1" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <div class="s-section">
+        <div class="s-section-title">การแสดงผล</div>
+        <div class="s-row">
+          <div class="s-label">ความถี่รีเฟรช</div>
+          <select class="s-select" id="s-refresh">
+            <option value="10">10 วินาที</option>
+            <option value="15">15 วินาที</option>
+            <option value="30" selected>30 วินาที</option>
+            <option value="60">60 วินาที</option>
+          </select>
+        </div>
+        <div class="s-toggle-row">
+          <span class="s-toggle-label">🔔 เสียงแจ้งเตือนเมื่อมีออเดอร์ใหม่</span>
+          <label class="s-toggle">
+            <input type="checkbox" id="s-sound">
+            <span class="s-toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="s-section">
+        <div class="s-section-title">ข้อมูลโปรแกรม</div>
+        <div class="s-info-grid" id="sInfoGrid"></div>
+      </div>
+
+      <div class="s-msg" id="sMsg"></div>
+    </div>
+    <div class="settings-foot">
+      <button class="s-btn s-btn-cancel" onclick="closeSettings()">ยกเลิก</button>
+      <button class="s-btn s-btn-save" id="sSaveBtn" onclick="saveSettings()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="confirmModal">
   <div class="modal-box">
     <div class="modal-ico" id="modalIco">↩️</div>
@@ -474,8 +609,9 @@ body{
    StaffID ควร inject จาก session PHP จริง
    เช่น: const STAFF_ID = <?= $_SESSION['staff_id'] ?? 0 ?>;
 ============================================================ */
-const API        = 'api_waiter.php';
-const REFRESH_SEC = 30;
+const API = 'api_waiter.php';
+let refreshSec  = parseInt(localStorage.getItem('waiter_refresh_sec') || '30', 10);
+let soundEnabled = localStorage.getItem('waiter_sound') === '1';
 let   STAFF_ID    = 0;
 let   STAFF_NAME  = '';
 
@@ -539,7 +675,7 @@ async function loadData() {
   } finally {
     btn.classList.remove('spin');
     render();
-    timer = setTimeout(loadData, REFRESH_SEC * 1000);
+    timer = setTimeout(loadData, refreshSec * 1000);
   }
 }
 
@@ -1148,6 +1284,114 @@ function doLogout() {
   clearTimeout(timer);
   showLoginOverlay();
 }
+
+/* ============================================================
+   SETTINGS MODAL
+============================================================ */
+let _logoTaps = 0, _logoTimer = null;
+document.getElementById('hdrLogo').addEventListener('click', () => {
+  _logoTaps++;
+  clearTimeout(_logoTimer);
+  if (_logoTaps >= 3) { _logoTaps = 0; openSettings(); return; }
+  _logoTimer = setTimeout(() => { _logoTaps = 0; }, 700);
+});
+
+async function openSettings() {
+  const modal = document.getElementById('settingsModal');
+  const msg   = document.getElementById('sMsg');
+  msg.className = 's-msg';
+  msg.textContent = '';
+  document.getElementById('sSaveBtn').disabled = false;
+  modal.classList.add('show');
+
+  try {
+    const res  = await fetch(`${API}?action=get_settings`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message);
+
+    document.getElementById('s-db-host').value      = json.db_host  || '';
+    document.getElementById('s-db-port').value      = json.db_port  || 3306;
+    document.getElementById('s-db-name').value      = json.db_name  || '';
+    document.getElementById('s-db-user').value      = json.db_user  || '';
+    document.getElementById('s-db-pass').value      = '';
+    document.getElementById('s-computer-id').value  = json.current_computer_id   || '';
+    document.getElementById('s-computer-name').value= json.current_computer_name || '';
+
+    const sel = document.getElementById('s-refresh');
+    sel.value = String(refreshSec);
+    if (!sel.value) sel.value = '30';
+
+    document.getElementById('s-sound').checked = soundEnabled;
+    document.getElementById('sVerBadge').textContent = json.version || 'v1.1.0';
+
+    const grid = document.getElementById('sInfoGrid');
+    grid.innerHTML = [
+      ['เวอร์ชั่น', json.version || '—'],
+      ['Computer ID (active)', json.current_computer_id || '—'],
+      ['ชื่อสถานี (active)', json.current_computer_name || '—'],
+      ['พนักงานที่ login', STAFF_NAME || '—'],
+    ].map(([k,v]) => `<span class="s-info-key">${esc(k)}</span><span class="s-info-val">${esc(String(v))}</span>`).join('');
+
+  } catch(e) {
+    msg.textContent = '⚠️ โหลดการตั้งค่าไม่ได้: ' + e.message;
+    msg.className = 's-msg err';
+  }
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('show');
+}
+
+function togglePass() {
+  const inp = document.getElementById('s-db-pass');
+  const btn = inp.parentElement.querySelector('.s-pass-toggle');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'ซ่อน'; }
+  else                         { inp.type = 'password'; btn.textContent = 'แสดง'; }
+}
+
+async function saveSettings() {
+  const btn = document.getElementById('sSaveBtn');
+  const msg = document.getElementById('sMsg');
+  btn.disabled = true;
+  msg.className = 's-msg';
+
+  // บันทึก localStorage ทันที (refresh + sound)
+  const newRefresh = parseInt(document.getElementById('s-refresh').value, 10) || 30;
+  const newSound   = document.getElementById('s-sound').checked;
+  localStorage.setItem('waiter_refresh_sec', String(newRefresh));
+  localStorage.setItem('waiter_sound', newSound ? '1' : '0');
+  refreshSec   = newRefresh;
+  soundEnabled = newSound;
+
+  // บันทึก server settings
+  try {
+    const fd = new FormData();
+    fd.append('action',               'save_settings');
+    fd.append('db_host',              document.getElementById('s-db-host').value.trim());
+    fd.append('db_port',              document.getElementById('s-db-port').value.trim());
+    fd.append('db_name',              document.getElementById('s-db-name').value.trim());
+    fd.append('db_user',              document.getElementById('s-db-user').value.trim());
+    fd.append('db_pass',              document.getElementById('s-db-pass').value);
+    fd.append('current_computer_id',  document.getElementById('s-computer-id').value.trim());
+    fd.append('current_computer_name',document.getElementById('s-computer-name').value.trim());
+    fd.append('sound_enabled',        newSound ? '1' : '0');
+    const res  = await fetch(API, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message);
+    msg.textContent = '✅ บันทึกสำเร็จ — การตั้งค่าจะมีผลเมื่อรีโหลดหน้า';
+    msg.className = 's-msg ok';
+  } catch(e) {
+    msg.textContent = '⚠️ บันทึกไม่สำเร็จ: ' + e.message;
+    msg.className = 's-msg err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ปิด settings เมื่อคลิก backdrop
+document.getElementById('settingsModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('settingsModal')) closeSettings();
+});
 
 /* START */
 document.getElementById('loginInput').addEventListener('keydown', e => {
