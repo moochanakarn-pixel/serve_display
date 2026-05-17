@@ -520,38 +520,24 @@ body{
           <div class="s-label">Host / IP Address</div>
           <input class="s-input" id="s-db-host" type="text" placeholder="127.0.0.1" autocomplete="off">
         </div>
-        <div class="s-row-inline">
-          <div class="s-row" style="flex:3">
-            <div class="s-label">ชื่อฐานข้อมูล</div>
-            <input class="s-input" id="s-db-name" type="text" placeholder="database_name" autocomplete="off">
-          </div>
-          <div class="s-row" style="flex:1">
-            <div class="s-label">Port</div>
-            <input class="s-input" id="s-db-port" type="number" placeholder="3306" min="1" max="65535">
-          </div>
-        </div>
         <div class="s-row">
-          <div class="s-label">Username</div>
-          <input class="s-input" id="s-db-user" type="text" placeholder="root" autocomplete="off">
+          <div class="s-label">ชื่อฐานข้อมูล</div>
+          <input class="s-input" id="s-db-name" type="text" placeholder="database_name" autocomplete="off">
         </div>
-        <div class="s-row">
-          <div class="s-label">Password <span style="font-weight:400;color:var(--muted)">(เว้นว่างไว้เพื่อคงค่าเดิม)</span></div>
-          <div class="s-pass-wrap">
-            <input class="s-input" id="s-db-pass" type="password" placeholder="••••••••" autocomplete="new-password">
-            <button class="s-pass-toggle" type="button" onclick="togglePass()">แสดง</button>
-          </div>
-        </div>
+        <input type="hidden" id="s-db-port">
+        <input type="hidden" id="s-db-user">
+        <input type="hidden" id="s-db-pass">
       </div>
 
       <div class="s-section">
-        <div class="s-section-title">สถานี</div>
+        <div class="s-section-title">Computer</div>
         <div class="s-row-inline">
           <div class="s-row" style="flex:1">
             <div class="s-label">Computer ID</div>
             <input class="s-input" id="s-computer-id" type="number" placeholder="1" min="0">
           </div>
           <div class="s-row" style="flex:2">
-            <div class="s-label">ชื่อสถานี</div>
+            <div class="s-label">ชื่อ Computer</div>
             <input class="s-input" id="s-computer-name" type="text" placeholder="Serve 1" autocomplete="off">
           </div>
         </div>
@@ -1342,12 +1328,6 @@ function closeSettings() {
   document.getElementById('settingsModal').classList.remove('show');
 }
 
-function togglePass() {
-  const inp = document.getElementById('s-db-pass');
-  const btn = inp.parentElement.querySelector('.s-pass-toggle');
-  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'ซ่อน'; }
-  else                         { inp.type = 'password'; btn.textContent = 'แสดง'; }
-}
 
 async function saveSettings() {
   const btn = document.getElementById('sSaveBtn');
