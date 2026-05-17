@@ -1,5 +1,42 @@
 # Serve Display — Changelog
 
+## v1.2.0 (2026-05-17)
+
+### ฟีเจอร์ใหม่
+
+| ฟีเจอร์ | รายละเอียด |
+|---|---|
+| Settings modal (กด logo 3 ครั้ง) | กดโลโก้ซ้ายบน 3 ครั้งติดกัน → เปิดหน้าตั้งค่าโปรแกรม |
+| ตั้งค่า DB Connection | แก้ Host / Port / DB name / User / Password ผ่าน UI โดยไม่ต้อง SSH แก้ไฟล์ |
+| ตั้งค่า Computer ID / ชื่อสถานี | กำหนด station สำหรับ nonKds filter ผ่าน UI ได้เลย |
+| ตั้งค่า Refresh interval | เลือก 10 / 15 / 30 / 60 วินาที บันทึก localStorage มีผลทันทีในรอบถัดไป |
+| toggle เสียงแจ้งเตือน | เปิด/ปิด sound alert บันทึก localStorage |
+| nonKds auto-serve | รายการที่ PrinterID ไม่ใช่ของ station นี้ → virtual ServeStatus=1 ทันที — ไม่ write DB |
+| Auto-serve set header (nonKds) | sub-item ทุกตัวในกลุ่มเป็น nonKds → header auto-tick ตามโดยอัตโนมัติ |
+| ซ่อนหัวเซ็ตโล่ง | หัวเซ็ตที่ sub-items ยังอยู่ในครัวหรือไม่มีเลย → ซ่อนใน tab รอเสิร์ฟ |
+
+---
+
+### API ใหม่
+
+| action | method | ทำอะไร |
+|---|---|---|
+| `get_settings` | GET | อ่านค่าจาก settings.local.php + version (ทำงานได้ก่อน DB connect) |
+| `save_settings` | POST | เขียน settings.local.php — password ว่าง = คงค่าเดิม |
+
+---
+
+### บัคที่แก้ไขใน v1.2.0
+
+| # | บัค | การแก้ |
+|---|---|---|
+| 23 | applyNonKds Pass 2 mark `_nonKds=true` บน set header ของ station ตัวเอง → กดไม่ได้ | Pass 2 set แค่ `ServeStatus=1` ไม่ set `_nonKds` |
+| 24 | tapUnserveAll optimistic reset ล้าง ServeStatus ของ nonKds rows | เพิ่ม `if (!r._nonKds)` ก่อน reset |
+| 25 | cascade tap header รวม nonKds sub-items ใน targets → เรียก API ผิด | เพิ่ม `&& !s._nonKds` ใน filter |
+| 26 | renderChips done tab ใช้ `every` ทั้งที่ done tab ใช้ `some` → chip ไม่ตรง | เปลี่ยน `every` เป็น `some` |
+
+---
+
 ## v1.1.0 (2026-05-14)
 
 ### ฟีเจอร์ใหม่
