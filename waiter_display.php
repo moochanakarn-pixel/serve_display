@@ -642,12 +642,12 @@ function buildCard(t, allowUnserve = false) {
   // set header แสดงเมื่อมี sub-item ในฝั่งนั้นๆ อยู่
   const visibleRows = sortItemsBySet(t.rows).filter(r => {
     if (r.ProductSetType == 7) {
+      const mySubs = t.rows.filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID);
+      if (!mySubs.length) return false; // sub-items ยังอยู่ในครัวหรือไม่มีเลย → ซ่อนหัวโล่ง
       if (allowUnserve) {
-        return t.rows.some(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus == 1)
-            || r.ServeStatus == 1;
+        return mySubs.some(s => s.ServeStatus == 1) || r.ServeStatus == 1;
       }
-      return t.rows.some(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus == 0)
-          || r.ServeStatus == 0;
+      return mySubs.some(s => s.ServeStatus == 0) || r.ServeStatus == 0;
     }
     return allowUnserve ? r.ServeStatus == 1 : r.ServeStatus == 0;
   });
