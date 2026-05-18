@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คู่มือการใช้งาน — Serve Display</title>
+<style>
+:root{
+  --bg:#edf5ff;--bg-2:#fff7ed;
+  --surface:#ffffff;--surface-soft:#f8fbff;
+  --text:#122033;--muted:#6b7a90;
+  --line:#dbe8f7;--line-strong:#c3d5ea;
+  --primary:#1683ff;--primary-dark:#0f69cf;--primary-deep:#0a3a70;
+  --secondary:#ff8a1f;--secondary-soft:#fff1e4;
+  --success:#12a150;--success-soft:#e6f8ee;
+  --warning:#d97706;--warning-soft:#fffbeb;
+  --danger:#e44c3a;--danger-soft:#ffe8e4;
+  --shadow:0 12px 28px rgba(15,23,42,.10);
+  --radius:20px;--radius-sm:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:Tahoma,Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,var(--bg),var(--bg-2));min-height:100vh}
+
+/* ── NAV ── */
+.nav{
+  position:sticky;top:0;z-index:100;
+  background:linear-gradient(135deg,rgba(8,58,112,.97),rgba(22,131,255,.93),rgba(255,138,31,.88));
+  color:#fff;box-shadow:0 6px 20px rgba(8,58,112,.18);
+}
+.nav-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:10px 20px;flex-wrap:wrap}
+.nav-logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;text-decoration:none;color:#fff}
+.nav-logo-ico{background:#fff;border-radius:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.nav-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-link{padding:5px 13px;border-radius:999px;font-size:12px;font-weight:700;color:rgba(255,255,255,.8);text-decoration:none;white-space:nowrap;transition:all .15s}
+.nav-link:hover,.nav-link.on{background:rgba(255,255,255,.18);color:#fff}
+.nav-ver{font-size:11px;opacity:.7;font-weight:700;white-space:nowrap}
+
+/* ── LAYOUT ── */
+.page{max-width:960px;margin:0 auto;padding:20px 16px 60px}
+
+/* ── HERO ── */
+.hero{
+  background:linear-gradient(135deg,var(--primary-deep),var(--primary),var(--secondary));
+  border-radius:24px;padding:40px 36px;color:#fff;margin-bottom:32px;
+  position:relative;overflow:hidden;
+}
+.hero::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:rgba(255,255,255,.06);border-radius:50%}
+.hero::after{content:'';position:absolute;bottom:-30px;right:60px;width:120px;height:120px;background:rgba(255,255,255,.04);border-radius:50%}
+.hero-badge{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 14px;font-size:11px;font-weight:700;margin-bottom:14px}
+.hero h1{font-size:28px;font-weight:800;margin-bottom:8px;line-height:1.2}
+.hero p{font-size:14px;line-height:1.7;opacity:.9;max-width:500px}
+.hero-tags{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.hero-tag{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 14px;font-size:12px;font-weight:700}
+
+/* ── SECTION ── */
+.section{margin-bottom:36px}
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.section-num{
+  width:32px;height:32px;background:linear-gradient(135deg,var(--primary-deep),var(--primary));
+  color:#fff;font-weight:800;font-size:14px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.section-title{font-size:18px;font-weight:800;color:var(--primary-deep)}
+.section-sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+/* ── CARD ── */
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);border:1.5px solid var(--line);overflow:hidden;margin-bottom:14px}
+.card-head{padding:12px 16px;font-size:12px;font-weight:800;color:var(--muted);background:var(--surface-soft);border-bottom:1px solid var(--line);letter-spacing:.05em;text-transform:uppercase}
+
+/* ── STEPS ── */
+.steps{display:flex;flex-direction:column;gap:14px}
+.step{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;background:#fff;border-radius:var(--radius-sm);border:1.5px solid var(--line);box-shadow:0 4px 12px rgba(22,131,255,.06)}
+.step-num{width:30px;height:30px;background:linear-gradient(135deg,var(--primary-deep),var(--primary));color:#fff;font-weight:800;font-size:13px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-body{}
+.step-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.6}
+.step-desc b{color:var(--text)}
+
+/* ── DEMO ELEMENTS (จำลอง UI จริง) ── */
+.demo{border:1.5px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface-soft);margin:12px 0}
+.demo-label{font-size:11px;font-weight:800;color:var(--muted);padding:7px 14px;background:var(--line);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--line-strong)}
+
+/* Header demo */
+.d-hdr{
+  background:linear-gradient(135deg,rgba(8,58,112,.96),rgba(22,131,255,.92),rgba(255,138,31,.88));
+  padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+}
+.d-hdr-l{display:flex;align-items:center;gap:10px}
+.d-hdr-ico{width:36px;height:36px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.d-hdr-title{font-size:16px;font-weight:700;color:#fff}
+.d-hdr-sub{font-size:10px;color:rgba(255,255,255,.85);font-weight:700}
+.d-hdr-r{display:flex;align-items:center;gap:8px}
+.d-live{width:7px;height:7px;background:#4ade80;border-radius:50%;box-shadow:0 0 6px #4ade80;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.d-clock{font-size:12px;font-weight:700;color:rgba(255,255,255,.9)}
+.d-rfbtn{padding:5px 11px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-size:11px;font-weight:700}
+.d-staff{background:rgba(255,255,255,.15);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:700}
+
+/* Tabs demo */
+.d-tabs{display:flex;gap:6px;padding:7px 12px;background:rgba(237,245,255,.98);border-bottom:1px solid var(--line)}
+.d-tab{padding:6px 14px;border-radius:999px;border:1.5px solid var(--line-strong);background:#fff;color:var(--muted);font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px}
+.d-tab .cnt{background:var(--line);color:var(--muted);border-radius:999px;padding:1px 7px;font-size:10px;font-weight:700}
+.d-tab.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.d-tab.on .cnt{background:rgba(255,255,255,.25);color:#fff}
+.d-tab.done2{background:var(--success);border-color:var(--success);color:#fff}
+.d-tab.done2 .cnt{background:rgba(255,255,255,.25);color:#fff}
+.d-tab.cook{background:#fff7ed;border-color:#fed7aa;color:#c2410c}
+.d-tab.cook .cnt{background:#fed7aa;color:#c2410c}
+
+/* Table card demo */
+.d-card{border-radius:16px;overflow:hidden;border:1.5px solid var(--line);box-shadow:var(--shadow);background:#fff;max-width:320px}
+.d-card.rdy{border-color:#bfeacc;box-shadow:0 0 0 2px rgba(18,161,80,.12),var(--shadow)}
+.d-card.part{border-color:#fcd34d;box-shadow:0 0 0 2px rgba(217,119,6,.10),var(--shadow)}
+.d-card.done{opacity:.55;border-color:var(--line)}
+.d-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,250,255,.9))}
+.d-tbl-badge{display:flex;align-items:center;gap:8px}
+.d-tbl-num{background:linear-gradient(135deg,var(--primary-deep),var(--primary));color:#fff;font-weight:800;font-size:13px;border-radius:7px;padding:3px 9px}
+.d-tbl-name{font-weight:700;font-size:14px;color:var(--primary-deep)}
+.d-queue{background:#f0f6ff;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:10px;font-weight:700;color:var(--muted)}
+.d-pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;display:flex;align-items:center;gap:3px}
+.d-pill.rdy{background:var(--success-soft);color:var(--success);border:1px solid #bfeacc}
+.d-pill.part{background:var(--warning-soft);color:var(--warning);border:1px solid #fcd34d}
+.d-pill.done{background:var(--line);color:var(--muted);border:1px solid var(--line-strong)}
+.d-meta{display:flex;gap:10px;padding:5px 13px;background:var(--surface-soft);border-bottom:1px solid var(--line)}
+.d-meta-item{font-size:10px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:3px}
+.d-meta-item b{color:var(--text)}
+.d-prog{padding:6px 13px 8px}
+.d-prog-track{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.d-prog-fill{height:100%;background:var(--success);border-radius:2px}
+.d-prog-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;font-weight:700}
+.d-prog-lbl .pc{color:var(--success)}
+
+/* Item row demo */
+.d-irow{display:flex;align-items:center;padding:10px 13px;gap:9px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.d-irow:last-child{border-bottom:none}
+.d-irow.served{opacity:.4}
+.d-chk{width:26px;height:26px;flex-shrink:0;border-radius:7px;border:2px solid var(--line-strong);display:flex;align-items:center;justify-content:center;transition:all .2s;background:#fff;position:relative;overflow:hidden}
+.d-chk::after{content:'';position:absolute;inset:0;background:var(--success);transform:scale(0);border-radius:5px;transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+.d-chk-ico{position:relative;z-index:1;opacity:0;transform:scale(.5);transition:all .2s;font-size:14px}
+.d-irow.served .d-chk{border-color:var(--success)}
+.d-irow.served .d-chk::after{transform:scale(1)}
+.d-irow.served .d-chk-ico{opacity:1;transform:scale(1)}
+.d-iname{font-size:13px;font-weight:700;color:var(--text);flex:1}
+.d-irow.served .d-iname{text-decoration:line-through;color:var(--muted)}
+.d-iqty{font-size:12px;font-weight:700;color:#9a5200;background:var(--secondary-soft);border:1px solid #ffd8b0;border-radius:7px;padding:2px 9px}
+.d-itime{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface-soft);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.d-istaff{font-size:10px;font-weight:700;color:var(--success);background:var(--success-soft);border:1px solid #bfeacc;border-radius:5px;padding:2px 6px}
+
+/* Set divider demo */
+.d-set{display:flex;align-items:center;justify-content:space-between;padding:6px 13px;background:linear-gradient(90deg,rgba(22,131,255,.08),transparent);border-bottom:1px solid var(--line);border-top:2px solid rgba(22,131,255,.15)}
+.d-set-label{font-size:11px;font-weight:800;color:var(--primary-deep);display:flex;align-items:center;gap:5px}
+.d-set-pid{font-size:10px;font-weight:700;color:var(--muted);font-family:monospace;opacity:.7}
+
+/* Serve button demo */
+.d-srv-btn{margin:0 13px 12px;padding:10px;border:none;border-radius:11px;background:linear-gradient(135deg,var(--success),#0f8c45);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 12px rgba(18,161,80,.25);width:calc(100% - 26px)}
+.d-srv-btn.unserve{background:linear-gradient(135deg,var(--warning),#b45309);box-shadow:0 4px 12px rgba(217,119,6,.25)}
+.d-cook-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
+
+/* Login demo */
+.d-login{background:linear-gradient(135deg,rgba(8,58,112,.97),rgba(22,131,255,.95),rgba(255,138,31,.90));padding:24px;display:flex;align-items:center;justify-content:center;border-radius:16px}
+.d-login-box{background:#fff;border-radius:20px;padding:28px 24px;width:240px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.d-login-ico{font-size:38px;margin-bottom:10px}
+.d-login-title{font-size:17px;font-weight:800;color:var(--primary-deep);margin-bottom:3px}
+.d-login-sub{font-size:11px;color:var(--muted);margin-bottom:18px}
+.d-login-inp{width:100%;padding:10px;border:2px solid var(--line);border-radius:10px;font-size:14px;text-align:center;letter-spacing:.15em;font-family:Tahoma,Arial,sans-serif;outline:none;box-sizing:border-box}
+.d-login-btn{width:100%;margin-top:10px;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--primary-deep),var(--primary));color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:Tahoma,Arial,sans-serif}
+
+/* Settings demo */
+.d-settings-box{background:#fff;border-radius:16px;max-width:340px;box-shadow:0 20px 50px rgba(0,0,0,.25);overflow:hidden}
+.d-settings-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.d-settings-title{font-size:14px;font-weight:800;color:var(--text);flex:1}
+.d-settings-ver{font-size:11px;color:var(--muted);font-family:monospace}
+.d-settings-close{background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:2px 5px}
+.d-s-section{padding:12px 16px 0}
+.d-s-title{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--primary);margin-bottom:9px;padding-bottom:4px;border-bottom:2px solid #e8f0fe}
+.d-s-row{margin-bottom:9px}
+.d-s-label{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px}
+.d-s-input{border:1.5px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12px;font-family:inherit;width:100%;box-sizing:border-box;outline:none}
+.d-s-inline{display:flex;gap:6px}
+.d-s-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0}
+.d-s-toggle-label{font-size:12px;color:var(--text)}
+.d-s-toggle{position:relative;width:38px;height:22px;flex-shrink:0}
+.d-s-toggle input{opacity:0;width:0;height:0;position:absolute}
+.d-s-track{position:absolute;inset:0;background:var(--primary);border-radius:999px;cursor:pointer}
+.d-s-track::after{content:'';position:absolute;top:3px;left:21px;width:16px;height:16px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.d-settings-foot{padding:11px 16px;border-top:1px solid var(--line);display:flex;gap:7px;margin-top:12px}
+.d-s-btn{flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:700;border:none;cursor:pointer}
+.d-s-btn.cancel{background:var(--surface-soft);color:var(--muted)}
+.d-s-btn.save{background:var(--primary);color:#fff}
+
+/* Search demo */
+.d-search-bar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(237,245,255,.98)}
+.d-search-wrap{position:relative;flex:1;max-width:260px}
+.d-search-inp{width:100%;padding:7px 10px 7px 30px;border-radius:999px;border:1.5px solid var(--line-strong);background:#fff;font-size:12px;font-family:Tahoma,Arial,sans-serif;outline:none}
+.d-search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px}
+.d-chips{display:flex;gap:5px;overflow:hidden}
+.d-chip{padding:4px 11px;border-radius:999px;border:1.5px solid #bfeacc;background:var(--success-soft);color:var(--success);font-size:10px;font-weight:700}
+.d-chip.part{border-color:#fcd34d;background:var(--warning-soft);color:var(--warning)}
+
+/* ── CALLOUT ── */
+.callout{border-radius:var(--radius-sm);padding:13px 16px;margin:12px 0;display:flex;gap:11px;align-items:flex-start}
+.callout-ico{font-size:18px;flex-shrink:0;margin-top:1px}
+.callout-body{font-size:13px;line-height:1.6;color:var(--text)}
+.callout-body b{font-weight:800}
+.callout.tip{background:#eff6ff;border:1.5px solid #bfdbfe}
+.callout.warn{background:var(--warning-soft);border:1.5px solid #fcd34d}
+.callout.ok{background:var(--success-soft);border:1.5px solid #bfeacc}
+.callout.danger{background:var(--danger-soft);border:1.5px solid #ffb3ab}
+
+/* ── STATUS TABLE ── */
+.status-table{width:100%;border-collapse:collapse;font-size:13px}
+.status-table th{text-align:left;padding:9px 12px;background:var(--surface-soft);font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;border-bottom:2px solid var(--line)}
+.status-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.status-table tr:last-child td{border-bottom:none}
+
+/* ── CHIPS GRID ── */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.feat-card{background:#fff;border-radius:var(--radius-sm);border:1.5px solid var(--line);padding:14px 16px;box-shadow:0 4px 12px rgba(22,131,255,.06)}
+.feat-ico{font-size:24px;margin-bottom:8px}
+.feat-title{font-size:13px;font-weight:800;color:var(--primary-deep);margin-bottom:4px}
+.feat-desc{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.badge.green{background:var(--success-soft);color:var(--success);border:1px solid #bfeacc}
+.badge.yellow{background:var(--warning-soft);color:var(--warning);border:1px solid #fcd34d}
+.badge.gray{background:var(--line);color:var(--muted);border:1px solid var(--line-strong)}
+.badge.orange{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
+.badge.blue{background:#eff6ff;color:var(--primary);border:1px solid #bfdbfe}
+
+/* ── DEMO INTERACTIVE ── */
+.demo-interactive{position:relative}
+.demo-note{font-size:11px;color:var(--muted);margin-top:6px;font-style:italic;text-align:center}
+
+/* ── FOOTER ── */
+.footer{text-align:center;padding:40px 20px;color:var(--muted);font-size:12px}
+.footer strong{color:var(--text)}
+
+@media(max-width:600px){
+  .hero{padding:28px 20px}
+  .hero h1{font-size:22px}
+  .feat-grid{grid-template-columns:1fr 1fr}
+  .d-card{max-width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="#">
+      <div class="nav-logo-ico">🍽️</div>
+      <span>คู่มือ Serve Display</span>
+    </a>
+    <div class="nav-links">
+      <a class="nav-link" href="#login">เข้าสู่ระบบ</a>
+      <a class="nav-link" href="#header">หน้าหลัก</a>
+      <a class="nav-link" href="#tabs">แท็บ</a>
+      <a class="nav-link" href="#cards">การ์ดโต๊ะ</a>
+      <a class="nav-link" href="#serve">การเสิร์ฟ</a>
+      <a class="nav-link" href="#unserve">ยกเลิก</a>
+      <a class="nav-link" href="#search">ค้นหา</a>
+      <a class="nav-link" href="#settings">ตั้งค่า</a>
+    </div>
+    <span class="nav-ver">v1.2.0</span>
+  </div>
+</nav>
+
+<div class="page">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">📖 คู่มือการใช้งาน</div>
+  <h1>Serve Display<br>หน้าจอสำหรับพนักงานเสิร์ฟ</h1>
+  <p>ระบบจัดการออเดอร์อาหารสำหรับพนักงานเสิร์ฟ ใช้งานผ่านแท็บเล็ตหรือมือถือ แสดงรายการที่รอเสิร์ฟจากครัวแบบ real-time</p>
+  <div class="hero-tags">
+    <span class="hero-tag">🔄 อัปเดตอัตโนมัติ</span>
+    <span class="hero-tag">📱 รองรับมือถือ</span>
+    <span class="hero-tag">🔔 แจ้งเตือนออเดอร์</span>
+    <span class="hero-tag">👨‍🍳 เชื่อมต่อ KDS ครัว</span>
+  </div>
+</div>
+
+<!-- ── ภาพรวมฟีเจอร์ ── -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-num">★</div>
+    <div>
+      <div class="section-title">ภาพรวมฟีเจอร์</div>
+      <div class="section-sub">สิ่งที่ทำได้ในโปรแกรมนี้</div>
+    </div>
+  </div>
+  <div class="feat-grid">
+    <div class="feat-card"><div class="feat-ico">✅</div><div class="feat-title">ติ๊กเสิร์ฟรายการ</div><div class="feat-desc">กดที่รายการอาหารเพื่อทำเครื่องหมายว่าเสิร์ฟแล้ว</div></div>
+    <div class="feat-card"><div class="feat-ico">🍽️</div><div class="feat-title">เสิร์ฟครบโต๊ะ</div><div class="feat-desc">กดปุ่มเดียวเสิร์ฟทุกรายการในโต๊ะพร้อมกัน</div></div>
+    <div class="feat-card"><div class="feat-ico">↩️</div><div class="feat-title">ยกเลิกการเสิร์ฟ</div><div class="feat-desc">ยกเลิกทีละรายการหรือทั้งโต๊ะได้ตลอดเวลา</div></div>
+    <div class="feat-card"><div class="feat-ico">🍳</div><div class="feat-title">ติดตามครัว</div><div class="feat-desc">ดูว่ารายการไหนยังทำอยู่ในครัว ยังไม่พร้อมเสิร์ฟ</div></div>
+    <div class="feat-card"><div class="feat-ico">🔍</div><div class="feat-title">ค้นหาโต๊ะ</div><div class="feat-desc">ค้นหาโต๊ะด้วยชื่อหรือเลขโต๊ะ กด chip จะ scroll ถึงทันที</div></div>
+    <div class="feat-card"><div class="feat-ico">⚙️</div><div class="feat-title">ตั้งค่าโปรแกรม</div><div class="feat-desc">ตั้งค่า DB, Computer ID, เสียงแจ้งเตือน ผ่าน UI</div></div>
+  </div>
+</div>
+
+<!-- ── 1. LOGIN ── -->
+<div class="section" id="login">
+  <div class="section-head">
+    <div class="section-num">1</div>
+    <div>
+      <div class="section-title">เข้าสู่ระบบ</div>
+      <div class="section-sub">ทุกครั้งที่เปิดโปรแกรม จะต้องกรอกรหัสพนักงานก่อน</div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-label">ตัวอย่าง — หน้าเข้าสู่ระบบ</div>
+    <div style="padding:16px">
+      <div class="d-login">
+        <div class="d-login-box">
+          <div class="d-login-ico">🍽️</div>
+          <div class="d-login-title">Serve Display</div>
+          <div class="d-login-sub">กรอกรหัสพนักงานเพื่อเข้าใช้งาน</div>
+          <input class="d-login-inp" value="1234" readonly>
+          <button class="d-login-btn">เข้าสู่ระบบ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">กรอกรหัสพนักงาน</div><div class="step-desc">พิมพ์รหัสพนักงานของคุณในช่อง แล้วกด <b>เข้าสู่ระบบ</b> หรือกด Enter</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">ระบบจดจำอัตโนมัติ</div><div class="step-desc">ชื่อพนักงานจะแสดงที่มุมขวาบนตลอดการใช้งาน ไม่ต้อง login ใหม่จนกว่าจะกด <b>ออกจากระบบ</b></div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">ออกจากระบบ</div><div class="step-desc">กดปุ่ม <b>ออก</b> ที่มุมขวาบน เพื่อ logout และให้พนักงานคนอื่น login แทน</div></div></div>
+  </div>
+</div>
+
+<!-- ── 2. HEADER ── -->
+<div class="section" id="header">
+  <div class="section-head">
+    <div class="section-num">2</div>
+    <div>
+      <div class="section-title">แถบด้านบน (Header)</div>
+      <div class="section-sub">ข้อมูลสำคัญและปุ่มควบคุม</div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-label">ตัวอย่าง — Header</div>
+    <div class="d-hdr">
+      <div class="d-hdr-l">
+        <div class="d-hdr-ico">🍽️</div>
+        <div>
+          <div class="d-hdr-title">เสิร์ฟอาหาร</div>
+          <div class="d-hdr-sub">Serve Display</div>
+        </div>
+      </div>
+      <div class="d-hdr-r">
+        <div class="d-live"></div>
+        <div class="d-clock">14:32</div>
+        <div class="d-rfbtn">🔄 รีเฟรช</div>
+        <div class="d-rfbtn">⛶ เต็มหน้าจอ</div>
+        <div class="d-staff">👤 นายก · ออก</div>
+      </div>
+    </div>
+  </div>
+
+  <table class="status-table" style="margin-top:12px;background:#fff;border-radius:var(--radius-sm);overflow:hidden;box-shadow:0 4px 12px rgba(22,131,255,.06)">
+    <thead><tr><th>องค์ประกอบ</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td>🟢 จุดสีเขียวกะพริบ</td><td>ระบบออนไลน์ กำลังรับข้อมูล</td></tr>
+      <tr><td>14:32 (นาฬิกา)</td><td>เวลาปัจจุบันของเครื่อง อัปเดตทุกนาที</td></tr>
+      <tr><td>🔄 รีเฟรช</td><td>กดเพื่อโหลดข้อมูลทันที (ปกติอัตโนมัติทุก 30 วินาที)</td></tr>
+      <tr><td>⛶ เต็มหน้าจอ</td><td>เปิด/ปิด fullscreen mode เหมาะกับแท็บเล็ต</td></tr>
+      <tr><td>👤 ชื่อพนักงาน</td><td>แสดงชื่อพนักงานที่ login อยู่ · กด ออก เพื่อ logout</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip" style="margin-top:12px">
+    <div class="callout-ico">💡</div>
+    <div class="callout-body"><b>Tip:</b> กดโลโก้ 🍽️ ซ้าย 3 ครั้งติดกัน เพื่อเปิดหน้าตั้งค่าโปรแกรม</div>
+  </div>
+</div>
+
+<!-- ── 3. TABS ── -->
+<div class="section" id="tabs">
+  <div class="section-head">
+    <div class="section-num">3</div>
+    <div>
+      <div class="section-title">แท็บ 3 มุมมอง</div>
+      <div class="section-sub">กรองมุมมองการทำงานตามสถานะออเดอร์</div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-label">ตัวอย่าง — แถบแท็บ</div>
+    <div class="d-tabs">
+      <div class="d-tab on">🕐 รอเสิร์ฟ <span class="cnt">5</span></div>
+      <div class="d-tab done2">✅ เสิร์ฟแล้ว <span class="cnt">12</span></div>
+      <div class="d-tab cook">🍳 อยู่ในครัว <span class="cnt">3</span></div>
+    </div>
+  </div>
+
+  <table class="status-table" style="margin-top:12px;background:#fff;border-radius:var(--radius-sm);overflow:hidden;box-shadow:0 4px 12px rgba(22,131,255,.06)">
+    <thead><tr><th>แท็บ</th><th>แสดงอะไร</th><th>ใช้เมื่อ</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge blue">🕐 รอเสิร์ฟ</span></td>
+        <td>โต๊ะที่มีอาหารพร้อมเสิร์ฟแต่ยังไม่ได้ติ๊ก</td>
+        <td>งานหลัก — ติ๊กรายการที่เสิร์ฟไปแล้ว</td>
+      </tr>
+      <tr>
+        <td><span class="badge green">✅ เสิร์ฟแล้ว</span></td>
+        <td>โต๊ะที่ติ๊กเสิร์ฟไปแล้วอย่างน้อย 1 รายการ</td>
+        <td>ตรวจสอบ / ยกเลิกการเสิร์ฟถ้าทำผิด</td>
+      </tr>
+      <tr>
+        <td><span class="badge orange">🍳 อยู่ในครัว</span></td>
+        <td>โต๊ะที่ยังมีรายการทำอยู่ในครัว (read-only)</td>
+        <td>แจ้งลูกค้าว่าอาหารยังไม่พร้อม</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout ok" style="margin-top:12px">
+    <div class="callout-ico">✅</div>
+    <div class="callout-body">ตัวเลขในวงกลมข้างแท็บ คือจำนวนโต๊ะ ไม่ใช่จำนวนรายการอาหาร</div>
+  </div>
+</div>
+
+<!-- ── 4. CARDS ── -->
+<div class="section" id="cards">
+  <div class="section-head">
+    <div class="section-num">4</div>
+    <div>
+      <div class="section-title">การ์ดโต๊ะ</div>
+      <div class="section-sub">สีขอบบอกสถานะการเสิร์ฟของแต่ละโต๊ะ</div>
+    </div>
+  </div>
+
+  <!-- 3 card states -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px">
+
+    <!-- รอเสิร์ฟ -->
+    <div>
+      <div style="margin-bottom:6px;display:flex;align-items:center;gap:6px"><span class="badge green">● ขอบเขียว</span><span style="font-size:12px;color:var(--muted)">พร้อมเสิร์ฟทุกรายการ</span></div>
+      <div class="d-card rdy">
+        <div class="d-card-hdr">
+          <div class="d-tbl-badge"><div class="d-tbl-num">A</div><div class="d-tbl-name">โต๊ะ A</div><div class="d-queue">🎫 Q-01</div></div>
+          <div class="d-pill rdy">● พร้อมเสิร์ฟ</div>
+        </div>
+        <div class="d-meta"><div class="d-meta-item">📋 <b>3</b> รายการ</div><div class="d-meta-item">⏱ รออยู่ <b>5</b> นาที</div><div class="d-cook-badge">🍳 0 ในครัว</div></div>
+        <div class="d-prog"><div class="d-prog-track"><div class="d-prog-fill" style="width:0%"></div></div><div class="d-prog-lbl"><span>รอเสิร์ฟ 3</span><span class="pc">0%</span></div></div>
+        <div class="d-set"><div class="d-set-label">🍜 เมนูชุด A</div><div class="d-set-pid">#000042</div></div>
+        <div class="d-irow"><div class="d-chk"><div class="d-chk-ico">✓</div></div><div class="d-iname">ข้าวผัดกุ้ง</div><div class="d-iqty">×1</div><div class="d-itime">14:20</div></div>
+        <div class="d-irow"><div class="d-chk"><div class="d-chk-ico">✓</div></div><div class="d-iname">ต้มยำทะเล</div><div class="d-iqty">×1</div><div class="d-itime">14:21</div></div>
+        <div class="d-srv-btn">✅ เสิร์ฟครบโต๊ะ</div>
+      </div>
+    </div>
+
+    <!-- บางส่วน -->
+    <div>
+      <div style="margin-bottom:6px;display:flex;align-items:center;gap:6px"><span class="badge yellow">● ขอบเหลือง</span><span style="font-size:12px;color:var(--muted)">เสิร์ฟแล้วบางส่วน</span></div>
+      <div class="d-card part">
+        <div class="d-card-hdr">
+          <div class="d-tbl-badge"><div class="d-tbl-num">B</div><div class="d-tbl-name">โต๊ะ B</div></div>
+          <div class="d-pill part">◐ บางส่วน</div>
+        </div>
+        <div class="d-meta"><div class="d-meta-item">📋 <b>2</b> รายการ</div><div class="d-meta-item">🍳 <b>1</b> ในครัว</div></div>
+        <div class="d-prog"><div class="d-prog-track"><div class="d-prog-fill" style="width:50%"></div></div><div class="d-prog-lbl"><span>เสิร์ฟแล้ว 1/2</span><span class="pc">50%</span></div></div>
+        <div class="d-irow served"><div class="d-chk"><div class="d-chk-ico">✓</div></div><div class="d-iname">ผัดไทยกุ้งสด</div><div class="d-iqty">×1</div><div class="d-istaff">นายก</div></div>
+        <div class="d-irow"><div class="d-chk"><div class="d-chk-ico">✓</div></div><div class="d-iname">แกงเขียวหวาน</div><div class="d-iqty">×1</div><div class="d-itime">14:25</div></div>
+        <div class="d-srv-btn">✅ เสิร์ฟครบโต๊ะ</div>
+      </div>
+    </div>
+
+    <!-- เสิร์ฟหมดแล้ว -->
+    <div>
+      <div style="margin-bottom:6px;display:flex;align-items:center;gap:6px"><span class="badge gray">● ซีด</span><span style="font-size:12px;color:var(--muted)">เสิร์ฟครบทุกรายการ</span></div>
+      <div class="d-card done">
+        <div class="d-card-hdr">
+          <div class="d-tbl-badge"><div class="d-tbl-num">C</div><div class="d-tbl-name">โต๊ะ C</div></div>
+          <div class="d-pill done">✓ เสิร์ฟครบ</div>
+        </div>
+        <div class="d-meta"><div class="d-meta-item">📋 <b>2</b> รายการ</div></div>
+        <div class="d-prog"><div class="d-prog-track"><div class="d-prog-fill" style="width:100%;background:var(--muted)"></div></div><div class="d-prog-lbl"><span>เสิร์ฟแล้ว 2/2</span><span style="color:var(--muted)">100%</span></div></div>
+        <div class="d-irow served"><div class="d-chk"><div class="d-chk-ico">✓</div></div><div class="d-iname">ปลาผัดพริกแกง</div><div class="d-iqty">×2</div><div class="d-istaff">นายก</div></div>
+        <div class="d-irow served"><div class="d-chk"><div class="d-chk-ico">✓</div></div><div class="d-iname">ข้าวสวย</div><div class="d-iqty">×2</div><div class="d-istaff">นายก</div></div>
+        <div class="d-srv-btn done-btn" style="background:var(--line);color:var(--muted);box-shadow:none">↩️ ยกเลิกเสิร์ฟโต๊ะ</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- อธิบาย elements ในการ์ด -->
+  <div class="card">
+    <div class="card-head">องค์ประกอบในการ์ดโต๊ะ</div>
+    <div style="padding:14px 16px">
+      <table class="status-table">
+        <thead><tr><th>ส่วนประกอบ</th><th>ความหมาย</th></tr></thead>
+        <tbody>
+          <tr><td><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:12px">🎫 Q-01</code> Queue badge</td><td>หมายเลขคิวลูกค้า ตรงกับจอ Checker ที่หน้าร้าน</td></tr>
+          <tr><td>เส้น Progress bar สีเขียว</td><td>สัดส่วนที่เสิร์ฟแล้ว / ทั้งหมด เช่น 1/3 = 33%</td></tr>
+          <tr><td><span class="badge orange">🍳 2 ในครัว</span></td><td>จำนวนรายการที่ยังทำอยู่ในครัว ยังไม่พร้อมเสิร์ฟ</td></tr>
+          <tr><td>หัวเซ็ต <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:12px">#000042</code></td><td>ชุดอาหาร (set) พร้อม Process ID อ้างอิงกับจอ KDS</td></tr>
+          <tr><td>ชื่อพนักงาน (เขียว)</td><td>ชื่อคนที่ติ๊กเสิร์ฟรายการนั้น</td></tr>
+          <tr><td>เวลา เช่น 14:20</td><td>เวลาที่ครัวทำเสร็จ (FinishDateTime)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── 5. SERVE ── -->
+<div class="section" id="serve">
+  <div class="section-head">
+    <div class="section-num">5</div>
+    <div>
+      <div class="section-title">การติ๊กเสิร์ฟ</div>
+      <div class="section-sub">ทำเครื่องหมายว่าอาหารถึงมือลูกค้าแล้ว</div>
+    </div>
+  </div>
+
+  <!-- Interactive demo -->
+  <div class="demo demo-interactive">
+    <div class="demo-label">ลองกด — คลิกที่รายการอาหาร</div>
+    <div style="padding:12px">
+      <div class="d-card" id="demoCard" style="max-width:320px;margin:0 auto">
+        <div class="d-card-hdr">
+          <div class="d-tbl-badge"><div class="d-tbl-num">D</div><div class="d-tbl-name">โต๊ะ D</div></div>
+          <div class="d-pill rdy" id="demoPill">● พร้อมเสิร์ฟ</div>
+        </div>
+        <div class="d-prog"><div class="d-prog-track"><div class="d-prog-fill" id="demoBar" style="width:0%"></div></div><div class="d-prog-lbl"><span id="demoBarLbl">รอเสิร์ฟ 3</span><span class="pc" id="demoBarPct">0%</span></div></div>
+        <div class="d-irow" id="demoRow1" onclick="toggleDemo(1)"><div class="d-chk" id="demoChk1"><div class="d-chk-ico">✓</div></div><div class="d-iname">ข้าวผัดกุ้ง</div><div class="d-iqty">×1</div><div class="d-itime">14:20</div></div>
+        <div class="d-irow" id="demoRow2" onclick="toggleDemo(2)"><div class="d-chk" id="demoChk2"><div class="d-chk-ico">✓</div></div><div class="d-iname">ต้มยำทะเล</div><div class="d-iqty">×1</div><div class="d-itime">14:21</div></div>
+        <div class="d-irow" id="demoRow3" onclick="toggleDemo(3)"><div class="d-chk" id="demoChk3"><div class="d-chk-ico">✓</div></div><div class="d-iname">แกงมัสมั่น</div><div class="d-iqty">×1</div><div class="d-itime">14:22</div></div>
+        <button class="d-srv-btn" id="demoSrvBtn" onclick="serveAll()">✅ เสิร์ฟครบโต๊ะ</button>
+      </div>
+    </div>
+    <div class="demo-note">💡 Demo ไม่ส่งข้อมูลจริง — ใช้ลองดูวิธีทำงาน</div>
+  </div>
+
+  <div class="steps" style="margin-top:16px">
+    <div class="step"><div class="step-num">A</div><div class="step-body"><div class="step-title">ติ๊กทีละรายการ</div><div class="step-desc"><b>กดที่แถวรายการอาหาร</b> — กล่องช็คจะเปลี่ยนเป็นสีเขียว ✓ และรายการจะซีดลงพร้อมขีดฆ่าชื่อ</div></div></div>
+    <div class="step"><div class="step-num">B</div><div class="step-body"><div class="step-title">กดหัวเซ็ต — ติ๊กทั้งกลุ่ม</div><div class="step-desc">กดที่ <b>แถบสีน้ำเงินหัวเซ็ต</b> (เช่น 🍜 เมนูชุด A) จะติ๊กทุกรายการในชุดนั้นพร้อมกัน</div></div></div>
+    <div class="step"><div class="step-num">C</div><div class="step-body"><div class="step-title">เสิร์ฟครบโต๊ะ</div><div class="step-desc">กดปุ่ม <b>เสิร์ฟครบโต๊ะ</b> ด้านล่างการ์ด จะมี confirm modal ก่อน กด ยืนยัน เพื่อติ๊กทุกรายการในโต๊ะ</div></div></div>
+  </div>
+
+  <div class="callout warn" style="margin-top:14px">
+    <div class="callout-ico">⚠️</div>
+    <div class="callout-body"><b>รายการ "อยู่ในครัว"</b> (badge 🍳) จะยังกดติ๊กไม่ได้ ต้องรอให้ครัวทำเสร็จก่อน</div>
+  </div>
+</div>
+
+<!-- ── 6. UNSERVE ── -->
+<div class="section" id="unserve">
+  <div class="section-head">
+    <div class="section-num">6</div>
+    <div>
+      <div class="section-title">ยกเลิกการเสิร์ฟ</div>
+      <div class="section-sub">กรณีติ๊กผิดหรือต้องการแก้ไข</div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-label">ตัวอย่าง — รายการที่เสิร์ฟแล้ว (แท็บ เสิร์ฟแล้ว)</div>
+    <div style="padding:12px">
+      <div class="d-card" style="max-width:320px;margin:0 auto">
+        <div class="d-card-hdr">
+          <div class="d-tbl-badge"><div class="d-tbl-num">E</div><div class="d-tbl-name">โต๊ะ E</div></div>
+          <div class="d-pill done">✓ เสิร์ฟครบ</div>
+        </div>
+        <div class="d-irow served" style="opacity:1"><div class="d-chk" style="border-color:var(--success);"><div class="d-chk-ico" style="opacity:1;transform:scale(1)">✓</div><div style="position:absolute;inset:0;background:var(--success);border-radius:5px;"></div></div><div class="d-iname" style="text-decoration:line-through;color:var(--muted)">ข้าวผัดกุ้ง</div><div class="d-iqty">×1</div><div class="d-istaff">นายก</div></div>
+        <div class="d-irow served" style="opacity:1"><div class="d-chk" style="border-color:var(--success);"><div class="d-chk-ico" style="opacity:1;transform:scale(1)">✓</div><div style="position:absolute;inset:0;background:var(--success);border-radius:5px;"></div></div><div class="d-iname" style="text-decoration:line-through;color:var(--muted)">ต้มยำทะเล</div><div class="d-iqty">×1</div><div class="d-istaff">สมชาย</div></div>
+        <div class="d-srv-btn unserve">↩️ ยกเลิกเสิร์ฟโต๊ะ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">ยกเลิกทีละรายการ</div><div class="step-desc">ไปที่แท็บ <b>เสิร์ฟแล้ว</b> → กดที่รายการที่ต้องการยกเลิก → กล่องช็คจะเปลี่ยนกลับเป็นว่าง</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">ยกเลิกทั้งโต๊ะ</div><div class="step-desc">กดปุ่ม <b>↩️ ยกเลิกเสิร์ฟโต๊ะ</b> ที่ด้านล่างการ์ด จะมี confirm modal ขึ้นมาก่อน</div></div></div>
+  </div>
+
+  <div class="callout danger">
+    <div class="callout-ico">⚠️</div>
+    <div class="callout-body">เมื่อยกเลิกแล้ว รายการจะกลับไปอยู่ใน <b>รอเสิร์ฟ</b> และชื่อพนักงานจะถูกลบออก ทำให้ต้องติ๊กใหม่</div>
+  </div>
+</div>
+
+<!-- ── 7. SEARCH ── -->
+<div class="section" id="search">
+  <div class="section-head">
+    <div class="section-num">7</div>
+    <div>
+      <div class="section-title">ค้นหาโต๊ะ</div>
+      <div class="section-sub">กรองและ jump ไปหาโต๊ะที่ต้องการ</div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-label">ตัวอย่าง — แถบค้นหา + chip โต๊ะ</div>
+    <div class="d-search-bar">
+      <div class="d-search-wrap">
+        <div class="d-search-ico">🔍</div>
+        <input class="d-search-inp" value="A" readonly>
+      </div>
+      <div class="d-chips">
+        <div class="d-chip">A</div>
+        <div class="d-chip part">B (1/2)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">พิมพ์ค้นหา</div><div class="step-desc">พิมพ์ชื่อโต๊ะ เลขโต๊ะ หรือชื่อเมนูในช่องค้นหา — การ์ดที่ไม่ตรงจะซ่อนไปทันที</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">กด chip โต๊ะ</div><div class="step-desc">chip สีเขียว/เหลืองใต้ช่องค้นหา คือโต๊ะที่กำลังแสดง <b>กดเพื่อ scroll ไปยังการ์ดนั้นทันที</b></div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">ล้างคำค้นหา</div><div class="step-desc">กดปุ่ม ✕ ในช่องค้นหาเพื่อล้างและแสดงทุกโต๊ะ</div></div></div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-ico">💡</div>
+    <div class="callout-body"><b>สีของ chip</b> บอกสถานะ — เขียว = รอเสิร์ฟครบ, เหลือง = บางส่วน (เลขในวงเล็บคือ ติ๊กแล้ว/ทั้งหมด)</div>
+  </div>
+</div>
+
+<!-- ── 8. SETTINGS ── -->
+<div class="section" id="settings">
+  <div class="section-head">
+    <div class="section-num">8</div>
+    <div>
+      <div class="section-title">ตั้งค่าโปรแกรม</div>
+      <div class="section-sub">กด Logo 🍽️ ซ้าย 3 ครั้งติดกัน เพื่อเปิดหน้าตั้งค่า</div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-label">ตัวอย่าง — Settings Modal</div>
+    <div style="padding:16px;background:rgba(0,0,0,.08);border-radius:0 0 16px 16px;display:flex;justify-content:center">
+      <div class="d-settings-box">
+        <div class="d-settings-head">
+          <span style="font-size:20px">⚙️</span>
+          <div class="d-settings-title">ตั้งค่าโปรแกรม</div>
+          <span class="d-settings-ver">v1.2.0</span>
+          <button class="d-settings-close">✕</button>
+        </div>
+        <div class="d-s-section">
+          <div class="d-s-title">ฐานข้อมูล</div>
+          <div class="d-s-row"><div class="d-s-label">Host / IP Address</div><input class="d-s-input" value="127.0.0.1" readonly></div>
+          <div class="d-s-row"><div class="d-s-label">ชื่อฐานข้อมูล</div><input class="d-s-input" value="myrestaurant_db" readonly></div>
+        </div>
+        <div class="d-s-section" style="margin-top:14px">
+          <div class="d-s-title">Computer</div>
+          <div class="d-s-inline">
+            <div class="d-s-row" style="flex:1"><div class="d-s-label">Computer ID</div><input class="d-s-input" value="2" readonly></div>
+            <div class="d-s-row" style="flex:2"><div class="d-s-label">ชื่อ Computer</div><input class="d-s-input" value="Serve 1" readonly></div>
+          </div>
+        </div>
+        <div class="d-s-section" style="margin-top:14px">
+          <div class="d-s-title">การแสดงผล</div>
+          <div class="d-s-toggle-row"><span class="d-s-toggle-label">🔔 เสียงแจ้งเตือน</span><label class="d-s-toggle"><input type="checkbox" checked><span class="d-s-track"></span></label></div>
+        </div>
+        <div class="d-settings-foot">
+          <button class="d-s-btn cancel">ยกเลิก</button>
+          <button class="d-s-btn save">💾 บันทึก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="status-table" style="margin-top:12px;background:#fff;border-radius:var(--radius-sm);overflow:hidden;box-shadow:0 4px 12px rgba(22,131,255,.06)">
+    <thead><tr><th>การตั้งค่า</th><th>คำอธิบาย</th><th>บันทึกที่</th></tr></thead>
+    <tbody>
+      <tr><td>Host / IP Address</td><td>IP หรือ hostname ของ MySQL server เช่น 192.168.1.100</td><td>settings.local.php</td></tr>
+      <tr><td>ชื่อฐานข้อมูล</td><td>ชื่อ database ที่ใช้งาน</td><td>settings.local.php</td></tr>
+      <tr><td>Computer ID</td><td>หมายเลขสถานีนี้ ใช้กรอง nonKds items</td><td>settings.local.php</td></tr>
+      <tr><td>ชื่อ Computer</td><td>ชื่อแสดงของสถานีนี้ เช่น "Serve 1"</td><td>settings.local.php</td></tr>
+      <tr><td>ความถี่รีเฟรช</td><td>ทุกกี่วินาทีจะโหลดข้อมูลใหม่ (10/15/30/60 วิ)</td><td>localStorage (เครื่องนี้)</td></tr>
+      <tr><td>🔔 เสียงแจ้งเตือน</td><td>เปิด/ปิดเสียงเมื่อมีออเดอร์ใหม่</td><td>localStorage (เครื่องนี้)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip" style="margin-top:12px">
+    <div class="callout-ico">💡</div>
+    <div class="callout-body"><b>DB settings</b> มีผลหลัง reload หน้าเว็บ | <b>Refresh interval</b> และ <b>เสียง</b> มีผลทันทีในรอบถัดไป</div>
+  </div>
+</div>
+
+<!-- ── QUICK REF ── -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-num">✦</div>
+    <div>
+      <div class="section-title">ตารางอ้างอิงด่วน</div>
+      <div class="section-sub">สรุปสีและสัญลักษณ์ทั้งหมด</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head">สี/สัญลักษณ์ → ความหมาย</div>
+    <div style="padding:4px 0">
+      <table class="status-table">
+        <thead><tr><th>สัญลักษณ์</th><th>ความหมาย</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge green">ขอบเขียว</span></td><td>การ์ดโต๊ะ — ทุกรายการพร้อมเสิร์ฟ (ยังไม่ได้ติ๊ก)</td></tr>
+          <tr><td><span class="badge yellow">ขอบเหลือง</span></td><td>การ์ดโต๊ะ — เสิร์ฟไปแล้วบางส่วน</td></tr>
+          <tr><td><span class="badge gray">ซีด/จาง</span></td><td>การ์ดโต๊ะ — เสิร์ฟครบทุกรายการแล้ว</td></tr>
+          <tr><td><span class="badge orange">🍳 N ในครัว</span></td><td>รายการที่ยังทำอยู่ในครัว กดติ๊กไม่ได้</td></tr>
+          <tr><td><span class="badge green">✓ สีเขียว (ชื่อพนักงาน)</span></td><td>รายการที่ติ๊กเสิร์ฟแล้ว บอกว่าใครเสิร์ฟ</td></tr>
+          <tr><td><span class="badge blue">🎫 Q-01</span></td><td>หมายเลขคิวลูกค้า ตรงกับจอ Checker</td></tr>
+          <tr><td><code style="background:#f3f4f6;padding:2px 7px;border-radius:4px;font-size:12px">#000042</code></td><td>Process ID ของเซ็ต ใช้อ้างอิงกับจอ KDS ในครัว</td></tr>
+          <tr><td>🟢 จุดกะพริบ (Header)</td><td>ระบบออนไลน์ กำลังรับข้อมูลปกติ</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /page -->
+
+<div class="footer">
+  <strong>Serve Display v1.2.0</strong> — คู่มือการใช้งาน<br>
+  <span style="margin-top:4px;display:block">สอบถามเพิ่มเติมติดต่อผู้ดูแลระบบ</span>
+</div>
+
+<script>
+// ── Demo interactive card ──
+const demoState = [false, false, false];
+
+function toggleDemo(n) {
+  demoState[n-1] = !demoState[n-1];
+  updateDemo();
+}
+
+function serveAll() {
+  demoState[0] = demoState[1] = demoState[2] = true;
+  updateDemo();
+}
+
+function updateDemo() {
+  const count = demoState.filter(Boolean).length;
+  for (let i = 1; i <= 3; i++) {
+    const row = document.getElementById('demoRow' + i);
+    const chk = document.getElementById('demoChk' + i);
+    if (demoState[i-1]) {
+      row.classList.add('served');
+      chk.style.borderColor = 'var(--success)';
+      chk.innerHTML = '<div style="position:absolute;inset:0;background:var(--success);border-radius:5px;"></div><div style="position:relative;z-index:1;font-size:14px;">✓</div>';
+    } else {
+      row.classList.remove('served');
+      chk.style.borderColor = '';
+      chk.innerHTML = '<div class="d-chk-ico">✓</div>';
+    }
+  }
+  const pct = Math.round(count / 3 * 100);
+  document.getElementById('demoBar').style.width = pct + '%';
+  document.getElementById('demoBarPct').textContent = pct + '%';
+  document.getElementById('demoBarLbl').textContent = count === 3 ? 'เสิร์ฟครบแล้ว' : 'รอเสิร์ฟ ' + (3 - count);
+
+  const pill = document.getElementById('demoPill');
+  const btn  = document.getElementById('demoSrvBtn');
+  if (count === 3) {
+    pill.className = 'd-pill done';
+    pill.textContent = '✓ เสิร์ฟครบ';
+    btn.style.background = 'var(--line)';
+    btn.style.color = 'var(--muted)';
+    btn.style.boxShadow = 'none';
+    btn.textContent = '↩️ ยกเลิกเสิร์ฟโต๊ะ';
+    btn.onclick = function(){ demoState[0]=demoState[1]=demoState[2]=false; updateDemo(); };
+  } else {
+    pill.className = count > 0 ? 'd-pill part' : 'd-pill rdy';
+    pill.textContent = count > 0 ? '◐ บางส่วน' : '● พร้อมเสิร์ฟ';
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.boxShadow = '';
+    btn.textContent = '✅ เสิร์ฟครบโต๊ะ';
+    btn.onclick = serveAll;
+  }
+}
+
+// ── Highlight nav link on scroll ──
+const sections = document.querySelectorAll('.section[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+window.addEventListener('scroll', () => {
+  let cur = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 80) cur = s.id;
+  });
+  navLinks.forEach(l => {
+    l.classList.toggle('on', l.getAttribute('href') === '#' + cur);
+  });
+}, {passive: true});
+</script>
+</body>
+</html>
