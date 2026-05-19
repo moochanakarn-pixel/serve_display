@@ -601,6 +601,13 @@ body{
             <span class="s-toggle-track"></span>
           </label>
         </div>
+        <div class="s-toggle-row">
+          <span class="s-toggle-label">📷 ระบบสแกนบาร์โค้ด (กล้อง + เครื่องยิง)</span>
+          <label class="s-toggle">
+            <input type="checkbox" id="s-barcode">
+            <span class="s-toggle-track"></span>
+          </label>
+        </div>
       </div>
 
       <div class="s-section">
@@ -1308,17 +1315,27 @@ function doLogout() {
 /* ============================================================
    BARCODE SCANNER — keyboard gun + camera
 ============================================================ */
-let barcodeBuffer = '';
-let barcodeTimer  = null;
-let lastScanPid   = 0;
-let lastScanTime  = 0;
-let cameraStream  = null;
-let cameraAnim    = null;
-let camCooldown   = false;
-let jsQRLoaded    = false;
+let barcodeBuffer  = '';
+let barcodeTimer   = null;
+let lastScanPid    = 0;
+let lastScanTime   = 0;
+let cameraStream   = null;
+let cameraAnim     = null;
+let camCooldown    = false;
+let isDetecting    = false;        // Bug fix: กัน async race ใน scanFrame
+let jsQRLoaded     = false;
+let barcodeEnabled = localStorage.getItem('waiter_barcode') !== '0'; // default เปิด
+
+/* ── ซ่อน/แสดงปุ่มกล้องตาม barcodeEnabled ── */
+function applyBarcodeEnabled() {
+  const btn = document.getElementById('scanCamBtn');
+  btn.style.display = barcodeEnabled ? '' : 'none';
+  if (!barcodeEnabled && cameraStream) stopCamera();
+}
 
 /* ── keyboard / scanner gun ── */
 document.addEventListener('keydown', e => {
+  if (!barcodeEnabled) return;
   if (document.getElementById('settingsModal').classList.contains('show')) return;
   if (document.getElementById('confirmModal').classList.contains('show')) return;
   const tag = document.activeElement?.tagName;
@@ -1375,8 +1392,10 @@ function serveBarcodeCode(raw) {
 
   if (match) {
     tapItem(rowKey(match));
-    document.getElementById('scanHintBar').textContent = '✅ #' + String(pid).padStart(6, '0');
-    setTimeout(() => { document.getElementById('scanHintBar').textContent = 'จ่อกล้องไปที่บาร์โค้ด'; }, 1800);
+    if (cameraStream) {
+      document.getElementById('scanHintBar').textContent = '✅ #' + String(pid).padStart(6, '0');
+      setTimeout(() => { document.getElementById('scanHintBar').textContent = 'จ่อกล้องไปที่บาร์โค้ด'; }, 1800);
+    }
     return;
   }
 
@@ -1400,7 +1419,7 @@ async function startCamera() {
     btn.classList.add('active');
     btn.textContent = '⏹ ปิดกล้อง';
     await loadJsQR();
-    requestAnimationFrame(scanFrame);
+    cameraAnim = requestAnimationFrame(scanFrame); // Bug fix: เก็บ ID frame แรก
   } catch(e) {
     toast('❌ เปิดกล้องไม่ได้: ' + e.message, true);
     cameraStream = null;
@@ -1410,6 +1429,7 @@ async function startCamera() {
 function stopCamera() {
   if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
   if (cameraAnim)   { cancelAnimationFrame(cameraAnim); cameraAnim = null; }
+  isDetecting = false;
   document.getElementById('scanOverlay').classList.add('hidden');
   const btn = document.getElementById('scanCamBtn');
   btn.classList.remove('active');
@@ -1420,7 +1440,8 @@ async function scanFrame() {
   if (!cameraStream) return;
   const video = document.getElementById('scanVideo');
 
-  if (video.readyState >= 2 && !camCooldown) {
+  if (video.readyState >= 2 && !camCooldown && !isDetecting) { // Bug fix: guard isDetecting
+    isDetecting = true;
     let code = null;
 
     if ('BarcodeDetector' in window) {
@@ -1450,9 +1471,10 @@ async function scanFrame() {
       serveBarcodeCode(code);
       setTimeout(() => { camCooldown = false; }, 1500);
     }
+    isDetecting = false; // Bug fix: reset ทุกครั้งหลัง detect เสร็จ
   }
 
-  cameraAnim = requestAnimationFrame(scanFrame);
+  if (cameraStream) cameraAnim = requestAnimationFrame(scanFrame); // Bug fix: schedule ต่อเฉพาะยังเปิดอยู่
 }
 
 async function loadJsQR() {
@@ -1502,7 +1524,8 @@ async function openSettings() {
     sel.value = String(refreshSec);
     if (!sel.value) sel.value = '30';
 
-    document.getElementById('s-sound').checked = soundEnabled;
+    document.getElementById('s-sound').checked   = soundEnabled;
+    document.getElementById('s-barcode').checked = barcodeEnabled;
     document.getElementById('sVerBadge').textContent = json.version || 'v1.1.0';
 
     const grid = document.getElementById('sInfoGrid');
@@ -1533,10 +1556,14 @@ async function saveSettings() {
   // บันทึก localStorage ทันที (refresh + sound)
   const newRefresh = parseInt(document.getElementById('s-refresh').value, 10) || 30;
   const newSound   = document.getElementById('s-sound').checked;
+  const newBarcode = document.getElementById('s-barcode').checked;
   localStorage.setItem('waiter_refresh_sec', String(newRefresh));
-  localStorage.setItem('waiter_sound', newSound ? '1' : '0');
-  refreshSec   = newRefresh;
-  soundEnabled = newSound;
+  localStorage.setItem('waiter_sound',   newSound   ? '1' : '0');
+  localStorage.setItem('waiter_barcode', newBarcode ? '1' : '0');
+  refreshSec     = newRefresh;
+  soundEnabled   = newSound;
+  barcodeEnabled = newBarcode;
+  applyBarcodeEnabled();
 
   // บันทึก server settings
   try {
@@ -1569,6 +1596,7 @@ document.getElementById('settingsModal').addEventListener('click', e => {
 });
 
 /* START */
+applyBarcodeEnabled();
 document.getElementById('loginInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
