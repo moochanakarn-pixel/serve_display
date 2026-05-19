@@ -187,10 +187,6 @@ body{
 .set-qty{font-size:11px;font-weight:700;color:var(--primary);flex-shrink:0}
 .set-pid{font-size:10px;font-weight:700;color:var(--muted);font-family:monospace;flex-shrink:0;opacity:.7}
 .nonkds-badge{font-size:10px;font-weight:600;color:#6b7280;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:1px 7px;flex-shrink:0}
-.irow.nonkds{cursor:default;opacity:.55}
-.irow.nonkds:active{background:transparent}
-.set-divider.nonkds{cursor:default;opacity:.5}
-.set-divider.nonkds:active{background:transparent}
 
 /* ITEM ROW */
 .irow{
@@ -617,35 +613,11 @@ const pending = new Set(); // rowKey ที่กำลัง POST อยู่
 ============================================================ */
 function applyNonKds(rows) {
   if (!allowedPrinters.size) return; // ไม่ได้ config → ไม่กรอง
-
-  // Pass 1: mark row ที่ PrinterID ไม่ใช่ของ station นี้
+  // mark badge "ครัวอื่น" เท่านั้น — ไม่เปลี่ยน ServeStatus, ยังกดติ๊กได้ปกติ
   rows.forEach(r => {
     const pid = parseInt(r.PrinterID, 10);
     if (isNaN(pid) || !allowedPrinters.has(pid)) {
-      r._origServe  = r.ServeStatus; // บันทึกค่าจริงไว้ก่อน
-      r._nonKds     = true;
-      r.ServeStatus = 1;
-    }
-  });
-
-  // Safety valve: ถ้าทุก row โดน mark เป็น nonKds
-  // (printer config ผิด / ยังไม่ได้ตั้งค่า) → ไม่กรอง แสดงทุกรายการตามปกติ
-  if (rows.length > 0 && rows.every(r => r._nonKds)) {
-    console.warn('[serve] nonKds safety: ทุก row เป็น nonKds — ยกเลิกการกรอง (ตรวจสอบ checkeraccessprinter)');
-    rows.forEach(r => {
-      r.ServeStatus = r._origServe ?? r.ServeStatus;
-      delete r._nonKds;
-      delete r._origServe;
-    });
-    return;
-  }
-
-  // Pass 2: set header ที่ sub-item ทุกตัวเสิร์ฟแล้ว (จริง + virtual) → ServeStatus=1
-  // ไม่ set _nonKds เพราะ header อาจเป็นของ station นี้เอง (ยังกดได้)
-  rows.filter(r => r.ProductSetType == 7 && r.ServeStatus != 1).forEach(hdr => {
-    const subs = rows.filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == hdr.ProcessID);
-    if (subs.length > 0 && subs.every(s => s.ServeStatus == 1)) {
-      hdr.ServeStatus = 1;
+      r._nonKds = true;
     }
   });
 }
@@ -808,7 +780,7 @@ function buildCard(t, allowUnserve = false) {
         const d = new Date(r.FinishDateTime.replace(' ', 'T'));
         return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
       })() : '';
-      const onclick = r._nonKds ? '' : (srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`);
+      const onclick = srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`;
       return `<div class="set-divider${srv ? ' served' : ''}${r._nonKds ? ' nonkds' : ''}" data-key="${key}" ${onclick}>
         <div class="set-label">📦 ${esc(r.ProductName)}</div>
         <div class="set-pid">#${String(r.ProcessID).padStart(6,'0')}</div>
@@ -825,10 +797,8 @@ function buildCard(t, allowUnserve = false) {
       const d = new Date(r.FinishDateTime.replace(' ', 'T'));
       return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     })() : '';
-    const staffLabel = r._nonKds
-      ? `<span class="nonkds-badge">ครัวอื่น</span>`
-      : (srv && r.ServingStaffName) ? `<div class="i-staff">👤 ${esc(r.ServingStaffName)}</div>` : '';
-    const onclick = r._nonKds ? '' : (srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`);
+    const staffLabel = (srv && r.ServingStaffName) ? `<div class="i-staff">👤 ${esc(r.ServingStaffName)}</div>` : '';
+    const onclick = srv ? `onclick="confirmUnserve('${key}')"` : `onclick="tapItem('${key}')"`;
     return `<div class="irow${srv ? ' served' : ''}${r._nonKds ? ' nonkds' : ''}" data-key="${key}" ${onclick}>
       <div class="chk">
         <svg class="chk-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -902,18 +872,16 @@ async function tapItem(key) {
 
   const r = rawRows.find(r => rowKey(r) === key);
   if (!r) return;
-  if (r._nonKds) return; // รายการของครัวอื่น — ไม่สามารถแก้ได้
-
   const wasServed = r.ServeStatus == 1;
   const newStatus = wasServed ? 0 : 1;
   const action    = wasServed ? 'unserve_item' : 'serve_item';
   const isHeader  = r.ProductSetType == 7;
 
-  // ถ้าเป็นหัวเซ็ต รวม sub-item ที่ยังไม่อยู่ใน target state ด้วย (ยกเว้น nonKds)
+  // ถ้าเป็นหัวเซ็ต รวม sub-item ที่ยังไม่อยู่ใน target state ด้วย
   const targets = [r];
   if (isHeader) {
     rawRows
-      .filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus != newStatus && !s._nonKds)
+      .filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == r.ProcessID && s.ServeStatus != newStatus)
       .forEach(s => targets.push(s));
   }
 
@@ -1100,8 +1068,6 @@ function jumpToTable(tableId) {
 /* ── confirm before unserve ── */
 async function confirmUnserve(key) {
   if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
-  const r = rawRows.find(r => rowKey(r) === key);
-  if (r && r._nonKds) return; // รายการของครัวอื่น — ไม่สามารถยกเลิกได้
   const ok = await showConfirm({ ico: '↩️', title: 'ยกเลิกการเสิร์ฟ?', msg: 'ต้องการยกเลิกรายการนี้ใช่ไหม', confirmLabel: 'ยกเลิกเสิร์ฟ' });
   if (!ok) return;
   await tapItem(key);
@@ -1117,7 +1083,7 @@ async function tapUnserveAll(tableId, tableName) {
   const t = tables.find(t => t.tableId == tableId);
   if (!t) { pending.delete(lockKey); return; }
 
-  t.rows.forEach(r => { if (!r._nonKds) r.ServeStatus = 0; });
+  t.rows.forEach(r => { r.ServeStatus = 0; });
   tables = groupByTable(rawRows);
   render();
 
