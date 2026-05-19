@@ -643,6 +643,8 @@ body{
    เช่น: const STAFF_ID = <?= $_SESSION['staff_id'] ?? 0 ?>;
 ============================================================ */
 const API = 'api_waiter.php';
+const BARCODE_MIN_LENGTH    = 1;  // ความยาวขั้นต่ำของรหัสที่รับได้
+const BARCODE_DIGITS_DISPLAY = 6;  // zero-pad ให้ครบกี่หลัก
 let refreshSec  = parseInt(localStorage.getItem('waiter_refresh_sec') || '30', 10);
 let soundEnabled = localStorage.getItem('waiter_sound') === '1';
 let   STAFF_ID    = 0;
@@ -1344,7 +1346,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (cameraStream) stopCamera(); return; }
 
   if (e.key === 'Enter') {
-    if (barcodeBuffer.length >= 1) {
+    if (barcodeBuffer.length >= BARCODE_MIN_LENGTH) {
       const buf = barcodeBuffer;
       barcodeBuffer = '';
       hideScanDigitBar();
@@ -1365,7 +1367,7 @@ document.addEventListener('keydown', e => {
 });
 
 function showScanDigitBar(buf) {
-  document.getElementById('scanDigitText').textContent = buf.padStart(6, '0');
+  document.getElementById('scanDigitText').textContent = buf.padStart(BARCODE_DIGITS_DISPLAY, '0');
   document.getElementById('scanDigitBar').classList.add('show');
 }
 function hideScanDigitBar() {
@@ -1400,7 +1402,7 @@ function serveBarcodeCode(raw) {
   }
 
   const already = rawRows.find(r => parseInt(r.ProcessID) === pid);
-  toast(already ? 'ℹ️ #' + String(pid).padStart(6,'0') + ' เสิร์ฟแล้ว' : '❌ ไม่พบ #' + String(pid).padStart(6,'0'), !already);
+  toast(already ? 'ℹ️ #' + String(pid).padStart(BARCODE_DIGITS_DISPLAY,'0') + ' เสิร์ฟแล้ว' : '❌ ไม่พบ #' + String(pid).padStart(BARCODE_DIGITS_DISPLAY,'0'), !already);
 }
 
 /* ── camera ── */
