@@ -427,6 +427,30 @@ body{
 .s-msg.err{background:#fee2e2;color:#b91c1c;display:block}
 .logo-tap-hint{outline:2px solid var(--primary);outline-offset:3px;border-radius:8px;animation:logo-tap-flash .3s ease}
 @keyframes logo-tap-flash{0%{opacity:.5}100%{opacity:1}}
+
+/* ── BARCODE SCANNER ── */
+.scan-cam-btn{appearance:none;border:1px solid rgba(255,255,255,.2);border-radius:12px;min-height:34px;padding:0 12px;font-size:12px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.18);color:#fff;font-family:Tahoma,Arial,sans-serif;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all .15s}
+.scan-cam-btn:active{background:rgba(255,255,255,.28)}
+.scan-cam-btn.active{background:var(--secondary);border-color:var(--secondary)}
+.scan-overlay{position:fixed;inset:0;z-index:800;background:#000;display:flex;align-items:center;justify-content:center}
+.scan-overlay.hidden{display:none}
+.scan-video{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.scan-ov-head{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(180deg,rgba(0,0,0,.65),transparent);z-index:2}
+.scan-ov-title{color:#fff;font-size:14px;font-weight:700}
+.scan-ov-close{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;width:38px;height:38px;border-radius:999px;cursor:pointer}
+.scan-frame{position:absolute;width:min(280px,72vw);height:min(200px,52vw);border-radius:16px;box-shadow:0 0 0 9999px rgba(0,0,0,.52);z-index:1}
+.scan-corner{position:absolute;width:28px;height:28px}
+.scan-corner.tl{top:-3px;left:-3px;border-top:4px solid var(--secondary);border-left:4px solid var(--secondary);border-radius:8px 0 0 0}
+.scan-corner.tr{top:-3px;right:-3px;border-top:4px solid var(--secondary);border-right:4px solid var(--secondary);border-radius:0 8px 0 0}
+.scan-corner.bl{bottom:-3px;left:-3px;border-bottom:4px solid var(--secondary);border-left:4px solid var(--secondary);border-radius:0 0 0 8px}
+.scan-corner.br{bottom:-3px;right:-3px;border-bottom:4px solid var(--secondary);border-right:4px solid var(--secondary);border-radius:0 0 8px 0}
+.scan-laser{position:absolute;width:min(280px,72vw);height:2px;background:linear-gradient(90deg,transparent,var(--secondary),transparent);box-shadow:0 0 8px var(--secondary);animation:laser 1.8s ease-in-out infinite;z-index:2}
+@keyframes laser{0%,100%{transform:translateY(-min(100px,26vw))}50%{transform:translateY(min(100px,26vw))}}
+.scan-hint-bar{position:absolute;bottom:70px;color:rgba(255,255,255,.9);font-size:12px;font-weight:700;padding:7px 18px;background:rgba(0,0,0,.45);border-radius:999px;z-index:2}
+.scan-flash{position:absolute;inset:0;background:rgba(18,161,80,.3);opacity:0;transition:opacity .12s;z-index:3;pointer-events:none}
+.scan-flash.show{opacity:1}
+.scan-digit-bar{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:rgba(10,30,60,.92);color:#fff;font-size:15px;font-weight:700;padding:9px 22px;border-radius:999px;z-index:9998;letter-spacing:.18em;box-shadow:var(--shadow);display:none;backdrop-filter:blur(8px);white-space:nowrap}
+.scan-digit-bar.show{display:block}
 </style>
 </head>
 <body>
@@ -459,6 +483,7 @@ body{
       <span class="staff-name" id="staffNameDisplay"></span>
       <button class="btn-logout" onclick="doLogout()">ออก</button>
     </div>
+    <button class="scan-cam-btn" id="scanCamBtn" onclick="toggleCamera()" title="สแกนบาร์โค้ดด้วยกล้อง">📷 กล้อง</button>
     <button class="rfbtn" id="rfBtn" onclick="loadData()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.36-2.64L3 21V15h6l-2.73 2.73A7 7 0 0 0 19 12z"/>
@@ -499,6 +524,25 @@ body{
 <div class="toast" id="toast"></div>
 
 <!-- CUSTOM CONFIRM MODAL -->
+<!-- CAMERA OVERLAY -->
+<div class="scan-overlay hidden" id="scanOverlay">
+  <video class="scan-video" id="scanVideo" autoplay playsinline muted></video>
+  <div class="scan-flash" id="scanFlash"></div>
+  <div class="scan-ov-head">
+    <span class="scan-ov-title">📷 สแกนบาร์โค้ด</span>
+    <button class="scan-ov-close" onclick="stopCamera()">✕</button>
+  </div>
+  <div class="scan-frame">
+    <div class="scan-corner tl"></div>
+    <div class="scan-corner tr"></div>
+    <div class="scan-corner bl"></div>
+    <div class="scan-corner br"></div>
+  </div>
+  <div class="scan-laser"></div>
+  <div class="scan-hint-bar" id="scanHintBar">จ่อกล้องไปที่บาร์โค้ด</div>
+</div>
+<div class="scan-digit-bar" id="scanDigitBar">🔍 <span id="scanDigitText"></span></div>
+
 <!-- SETTINGS MODAL -->
 <div class="settings-backdrop" id="settingsModal">
   <div class="settings-box">
@@ -1259,6 +1303,167 @@ function doLogout() {
   STAFF_ID = 0;
   clearTimeout(timer);
   showLoginOverlay();
+}
+
+/* ============================================================
+   BARCODE SCANNER — keyboard gun + camera
+============================================================ */
+let barcodeBuffer = '';
+let barcodeTimer  = null;
+let lastScanPid   = 0;
+let lastScanTime  = 0;
+let cameraStream  = null;
+let cameraAnim    = null;
+let camCooldown   = false;
+let jsQRLoaded    = false;
+
+/* ── keyboard / scanner gun ── */
+document.addEventListener('keydown', e => {
+  if (document.getElementById('settingsModal').classList.contains('show')) return;
+  if (document.getElementById('confirmModal').classList.contains('show')) return;
+  const tag = document.activeElement?.tagName;
+  if (['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
+
+  if (e.key === 'Escape') { if (cameraStream) stopCamera(); return; }
+
+  if (e.key === 'Enter') {
+    if (barcodeBuffer.length >= 1) {
+      const buf = barcodeBuffer;
+      barcodeBuffer = '';
+      hideScanDigitBar();
+      serveBarcodeCode(buf);
+    }
+    return;
+  }
+
+  if (/^\d$/.test(e.key)) {
+    barcodeBuffer += e.key;
+    showScanDigitBar(barcodeBuffer);
+    clearTimeout(barcodeTimer);
+    barcodeTimer = setTimeout(() => {
+      barcodeBuffer = '';
+      hideScanDigitBar();
+    }, 1200);
+  }
+});
+
+function showScanDigitBar(buf) {
+  document.getElementById('scanDigitText').textContent = buf.padStart(6, '0');
+  document.getElementById('scanDigitBar').classList.add('show');
+}
+function hideScanDigitBar() {
+  document.getElementById('scanDigitBar').classList.remove('show');
+}
+
+/* ── ประมวลผลรหัสที่ได้รับ ── */
+function serveBarcodeCode(raw) {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return;
+  const pid = parseInt(digits, 10);
+  if (!pid) return;
+
+  const now = Date.now();
+  if (pid === lastScanPid && now - lastScanTime < 1500) return;
+  lastScanPid  = pid;
+  lastScanTime = now;
+
+  if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
+
+  // หาแถวที่ยังไม่ได้เสิร์ฟ — priority: set header → standalone/sub-item
+  let match = rawRows.find(r => parseInt(r.ProcessID) === pid && r.ServeStatus == 0 && r.ProductSetType == 7);
+  if (!match) match = rawRows.find(r => parseInt(r.ProcessID) === pid && r.ServeStatus == 0);
+
+  if (match) {
+    tapItem(rowKey(match));
+    document.getElementById('scanHintBar').textContent = '✅ #' + String(pid).padStart(6, '0');
+    setTimeout(() => { document.getElementById('scanHintBar').textContent = 'จ่อกล้องไปที่บาร์โค้ด'; }, 1800);
+    return;
+  }
+
+  const already = rawRows.find(r => parseInt(r.ProcessID) === pid);
+  toast(already ? 'ℹ️ #' + String(pid).padStart(6,'0') + ' เสิร์ฟแล้ว' : '❌ ไม่พบ #' + String(pid).padStart(6,'0'), !already);
+}
+
+/* ── camera ── */
+async function toggleCamera() {
+  if (cameraStream) { stopCamera(); return; }
+  await startCamera();
+}
+
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    const video  = document.getElementById('scanVideo');
+    video.srcObject = cameraStream;
+    document.getElementById('scanOverlay').classList.remove('hidden');
+    const btn = document.getElementById('scanCamBtn');
+    btn.classList.add('active');
+    btn.textContent = '⏹ ปิดกล้อง';
+    await loadJsQR();
+    requestAnimationFrame(scanFrame);
+  } catch(e) {
+    toast('❌ เปิดกล้องไม่ได้: ' + e.message, true);
+    cameraStream = null;
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  if (cameraAnim)   { cancelAnimationFrame(cameraAnim); cameraAnim = null; }
+  document.getElementById('scanOverlay').classList.add('hidden');
+  const btn = document.getElementById('scanCamBtn');
+  btn.classList.remove('active');
+  btn.textContent = '📷 กล้อง';
+}
+
+async function scanFrame() {
+  if (!cameraStream) return;
+  const video = document.getElementById('scanVideo');
+
+  if (video.readyState >= 2 && !camCooldown) {
+    let code = null;
+
+    if ('BarcodeDetector' in window) {
+      try {
+        const bd = new BarcodeDetector({ formats: ['code_128','code_39','ean_13','ean_8','qr_code','upc_a','itf'] });
+        const results = await bd.detect(video);
+        if (results.length) code = results[0].rawValue;
+      } catch(_) {}
+    }
+
+    if (!code && window.jsQR) {
+      try {
+        const c = document.createElement('canvas');
+        c.width = video.videoWidth || 640; c.height = video.videoHeight || 480;
+        c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+        const r = jsQR(d.data, d.width, d.height);
+        if (r) code = r.data;
+      } catch(_) {}
+    }
+
+    if (code) {
+      camCooldown = true;
+      const flash = document.getElementById('scanFlash');
+      flash.classList.add('show');
+      setTimeout(() => flash.classList.remove('show'), 180);
+      serveBarcodeCode(code);
+      setTimeout(() => { camCooldown = false; }, 1500);
+    }
+  }
+
+  cameraAnim = requestAnimationFrame(scanFrame);
+}
+
+async function loadJsQR() {
+  if (jsQRLoaded || window.jsQR) return;
+  return new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    s.onload  = () => { jsQRLoaded = true; resolve(); };
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
 }
 
 /* ============================================================
