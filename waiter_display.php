@@ -617,13 +617,29 @@ const pending = new Set(); // rowKey ที่กำลัง POST อยู่
 ============================================================ */
 function applyNonKds(rows) {
   if (!allowedPrinters.size) return; // ไม่ได้ config → ไม่กรอง
-  // Pass 1: mark แต่ละ row ที่ PrinterID ไม่ใช่ของ station นี้
+
+  // Pass 1: mark row ที่ PrinterID ไม่ใช่ของ station นี้
   rows.forEach(r => {
-    if (!allowedPrinters.has(parseInt(r.PrinterID, 10))) {
+    const pid = parseInt(r.PrinterID, 10);
+    if (isNaN(pid) || !allowedPrinters.has(pid)) {
+      r._origServe  = r.ServeStatus; // บันทึกค่าจริงไว้ก่อน
       r._nonKds     = true;
       r.ServeStatus = 1;
     }
   });
+
+  // Safety valve: ถ้าทุก row โดน mark เป็น nonKds
+  // (printer config ผิด / ยังไม่ได้ตั้งค่า) → ไม่กรอง แสดงทุกรายการตามปกติ
+  if (rows.length > 0 && rows.every(r => r._nonKds)) {
+    console.warn('[serve] nonKds safety: ทุก row เป็น nonKds — ยกเลิกการกรอง (ตรวจสอบ checkeraccessprinter)');
+    rows.forEach(r => {
+      r.ServeStatus = r._origServe ?? r.ServeStatus;
+      delete r._nonKds;
+      delete r._origServe;
+    });
+    return;
+  }
+
   // Pass 2: set header ที่ sub-item ทุกตัวเสิร์ฟแล้ว (จริง + virtual) → ServeStatus=1
   // ไม่ set _nonKds เพราะ header อาจเป็นของ station นี้เอง (ยังกดได้)
   rows.filter(r => r.ProductSetType == 7 && r.ServeStatus != 1).forEach(hdr => {
@@ -654,6 +670,14 @@ async function loadData() {
     cooking      = json.cooking      || {};
     cookingRows  = json.cooking_rows || [];
     tables       = groupByTable(rawRows);
+
+    console.log(
+      `[serve] rows=${rawRows.length}`,
+      `printers=[${[...allowedPrinters].join(',')||'ไม่ได้ config'}]`,
+      `nonKds=${rawRows.filter(r=>r._nonKds).length}`,
+      `wait=${rawRows.filter(r=>r.ServeStatus==0).length}`,
+      `done=${rawRows.filter(r=>r.ServeStatus==1).length}`
+    );
     hideError();
 
   } catch (e) {
