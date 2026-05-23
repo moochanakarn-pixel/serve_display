@@ -833,6 +833,14 @@ function buildCard(t, allowUnserve = false) {
   const pct       = total ? Math.round(served / total * 100) : 0;
   const stillCook = cooking[t.tableId] || 0;
 
+  // ต้อง declare cardTitle/modeLabel ก่อนใช้ใน btn (แก้ ReferenceError temporal dead zone)
+  const modeLabel = t.isDelivery
+    ? (saleModes[t.saleModeId] || `Mode ${t.saleModeId}`)
+    : 'โต๊ะ';
+  const cardTitle = t.isDelivery
+    ? (t.queueName || t.tableName)
+    : t.tableName;
+
   const cls  = allDone ? 'c-done' : served > 0 ? 'c-part' : 'c-rdy';
   const pill = allDone
     ? `<span class="pill p-done">✅ เสิร์ฟครบ</span>`
@@ -914,13 +922,6 @@ function buildCard(t, allowUnserve = false) {
       </button>`;
   }
 
-  const modeLabel = t.isDelivery
-    ? (saleModes[t.saleModeId] || `Mode ${t.saleModeId}`)
-    : 'โต๊ะ';
-  const cardTitle = t.isDelivery
-    ? (t.queueName || t.tableName)
-    : t.tableName;
-  const cardSub = t.isDelivery ? t.tableName : `โต๊ะ ${t.tableName}`;
 
   return `<div class="card ${cls}" data-table="${t.tableId}">
     <div class="c-hdr">
