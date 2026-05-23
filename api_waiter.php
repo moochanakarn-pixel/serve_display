@@ -76,10 +76,13 @@ try {
                 CASE WHEN o.ServingDateTime IS NOT NULL THEN 1 ELSE 0 END AS ServeStatus,
                 TRIM(COALESCE(s.StaffFirstName, '')) AS ServingStaffName,
                 TRIM(COALESCE(tr.QueueName, '')) AS QueueName,
-                COALESCE(o.SaleModeID, 0) AS SaleModeID
+                COALESCE(o.SaleModeID, 0) AS SaleModeID,
+                TRIM(COALESCE(od.Comment, '')) AS ItemComment,
+                COALESCE(od.Price, 0) AS ItemPrice
             FROM orderprocessdetailfront o
             LEFT JOIN staffs s ON s.StaffID = o.ServingStaffID AND o.ServingStaffID > 0
             LEFT JOIN ordertransactionfront tr ON tr.TransactionID = o.TransactionID AND tr.ComputerID = o.ComputerID
+            LEFT JOIN orderdetailfront od ON od.ProcessID = o.ProcessID AND od.ProcessID > 0
             WHERE o.ProcessStatus = 1
               AND COALESCE(o.FinishDateTime, o.SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
             ORDER BY o.FinishDateTime ASC

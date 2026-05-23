@@ -224,6 +224,7 @@ body{
 .i-info{flex:1;min-width:0}
 .i-name{font-size:14px;font-weight:700;line-height:1.3;color:var(--text)}
 .irow.served .i-name{text-decoration:line-through;color:var(--muted)}
+.i-comment{font-size:11px;color:var(--warning);font-weight:600;margin-top:2px;line-height:1.3}
 .i-tags{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap}
 .tag{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700}
 .tag.set{background:#eef6ff;color:#1758a5;border:1px solid #d5e7ff}
@@ -891,6 +892,7 @@ function buildCard(t, allowUnserve = false) {
       </div>
       <div class="i-info">
         <div class="i-name">${esc(r.ProductName)}</div>
+        ${r.ItemComment ? `<div class="i-comment">💬 ${esc(r.ItemComment)}</div>` : ''}
         ${tag ? `<div class="i-tags">${tag}</div>` : ''}
       </div>
       ${staffLabel}
