@@ -728,8 +728,9 @@ function groupByTable(rows) {
     const smId = parseInt(r.SaleModeID, 10) || 0;
     const tblKey = parseInt(r.TableID, 10) || 0;
     const isDelivery = tblKey === 0;
-    // delivery orders (TableID=0) ใช้ TransactionID แยกบิล เพราะ unique ต่อออเดอร์
-    const k = !isDelivery ? `${tblKey}_${smId}` : `tx_${r.TransactionID || r.DisplayTableName || ''}`;
+    // delivery orders (TableID=0) ใช้ DisplayTableName + SaleModeID แยกบิล
+    // TransactionID ใน production อาจ collide → ไม่น่าเชื่อถือ
+    const k = !isDelivery ? `${tblKey}_${smId}` : `d_${r.DisplayTableName || ''}_${smId}`;
     if (!map[k]) map[k] = {
       tableId:    r.TableID,
       tableName:  r.DisplayTableName || String(r.TableID),
