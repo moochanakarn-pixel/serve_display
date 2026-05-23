@@ -74,7 +74,8 @@ try {
                 o.ServingDateTime,
                 CASE WHEN o.ServingDateTime IS NOT NULL THEN 1 ELSE 0 END AS ServeStatus,
                 TRIM(COALESCE(s.StaffFirstName, '')) AS ServingStaffName,
-                TRIM(COALESCE(tr.QueueName, '')) AS QueueName
+                TRIM(COALESCE(tr.QueueName, '')) AS QueueName,
+                COALESCE(o.SaleModeID, 0) AS SaleModeID
             FROM orderprocessdetailfront o
             LEFT JOIN staffs s ON s.StaffID = o.ServingStaffID AND o.ServingStaffID > 0
             LEFT JOIN ordertransactionfront tr ON tr.TransactionID = o.TransactionID AND tr.ComputerID = o.ComputerID
@@ -128,8 +129,19 @@ try {
             $pStmt->close();
         }
 
+        // ดึงชื่อ SaleMode
+        $saleModes = [];
+        try {
+            $smResult = $conn->query("SELECT SaleModeID, SaleModeName FROM salemode WHERE Deleted = 0");
+            if ($smResult) {
+                while ($sm = $smResult->fetch_assoc()) {
+                    $saleModes[(int)$sm['SaleModeID']] = $sm['SaleModeName'];
+                }
+            }
+        } catch (Exception $e) {}
+
         $conn->close();
-        jsonResponse(['success' => true, 'rows' => $rows, 'cooking' => $cooking, 'cooking_rows' => $cookingRows, 'allowed_printer_ids' => $allowedPrinterIds]);
+        jsonResponse(['success' => true, 'rows' => $rows, 'cooking' => $cooking, 'cooking_rows' => $cookingRows, 'allowed_printer_ids' => $allowedPrinterIds, 'sale_modes' => $saleModes]);
 
     } elseif ($action === 'serve_item') {
         $plid  = (int)($_POST['ProductLevelID'] ?? 0);

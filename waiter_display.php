@@ -309,6 +309,10 @@ body{
 .empty h3{font-size:16px;color:var(--text);font-weight:700}
 .empty p{font-size:12px;margin-top:6px;line-height:1.7}
 
+/* SALE-MODE SECTION SEPARATOR */
+.mode-sep{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:700;color:var(--text);letter-spacing:.3px;margin-top:4px}
+.mode-sep-icon{font-size:16px;line-height:1}
+
 /* LOADING */
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:14px;color:var(--muted);grid-column:1/-1}
 .spinner{width:28px;height:28px;border:2.5px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:rot .7s linear infinite}
@@ -659,6 +663,7 @@ let filter         = 'wait';
 let search         = '';
 let timer          = null;
 let allowedPrinters = new Set(); // PrinterID ที่ station นี้ดูแล; ว่าง = ไม่กรอง
+let saleModes = {}; // {SaleModeID: SaleModeName}
 const pending = new Set(); // rowKey ที่กำลัง POST อยู่
 
 /* ============================================================
@@ -690,7 +695,8 @@ async function loadData() {
     if (!json.success) throw new Error(json.message || 'API error');
 
     allowedPrinters = new Set((json.allowed_printer_ids || []).map(Number));
-    rawRows         = json.rows;
+    saleModes    = json.sale_modes   || {};
+    rawRows      = json.rows;
     applyNonKds(rawRows);
     cooking      = json.cooking      || {};
     cookingRows  = json.cooking_rows || [];
@@ -718,12 +724,14 @@ async function loadData() {
 function groupByTable(rows) {
   const map = {};
   rows.forEach(r => {
-    const k = r.TableID;
+    const smId = parseInt(r.SaleModeID, 10) || 0;
+    const k = `${r.TableID}_${smId}`;
     if (!map[k]) map[k] = {
-      tableId:   r.TableID,
-      tableName: r.DisplayTableName || String(r.TableID),
-      queueName: r.QueueName || '',
-      earliest:  r.FinishDateTime || r.SubmitOrderDateTime || '',
+      tableId:    r.TableID,
+      tableName:  r.DisplayTableName || String(r.TableID),
+      queueName:  r.QueueName || '',
+      saleModeId: smId,
+      earliest:   r.FinishDateTime || r.SubmitOrderDateTime || '',
       rows: []
     };
     // ใช้ชื่อโต๊ะล่าสุด (รองรับโต๊ะโอน A3->A5)
@@ -788,7 +796,27 @@ function render() {
     el.innerHTML = `<div class="empty"><div class="ico">${emptyMsg.ico}</div><h3>${emptyMsg.h}</h3><p>${emptyMsg.p}</p></div>`;
     return;
   }
-  el.innerHTML = shown.map(t => buildCard(t, filter === 'done')).join('');
+
+  // จัดกลุ่มตาม SaleModeID → แสดง section header เมื่อมีมากกว่า 1 mode
+  const modeGroups = {};
+  shown.forEach(t => {
+    const smId = t.saleModeId || 0;
+    if (!modeGroups[smId]) modeGroups[smId] = [];
+    modeGroups[smId].push(t);
+  });
+  const modeIds = Object.keys(modeGroups).map(Number).sort((a, b) => a - b);
+  const multiMode = modeIds.length > 1;
+
+  const parts = [];
+  modeIds.forEach(smId => {
+    if (multiMode) {
+      const name = saleModes[smId] || (smId === 0 ? 'ทั่วไป' : `Mode ${smId}`);
+      const icon = saleModeIcon(smId, name);
+      parts.push(`<div class="mode-sep"><span class="mode-sep-icon">${icon}</span>${escHtml(name)}</div>`);
+    }
+    modeGroups[smId].forEach(t => parts.push(buildCard(t, filter === 'done')));
+  });
+  el.innerHTML = parts.join('');
 }
 
 /* ── build card HTML ── */
@@ -1185,6 +1213,21 @@ function sortItemsBySet(rows) {
   // orphan sub-items ที่หาหัวไม่เจอ
   subItems.filter(s => !placed.has(s.ProcessID)).forEach(s => result.push(s));
   return result;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function saleModeIcon(id, name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('grab'))     return '🟢';
+  if (n.includes('line'))     return '💚';
+  if (n.includes('food'))     return '🛵';
+  if (n.includes('delivery')) return '📦';
+  if (n.includes('takeaway') || n.includes('take away') || n.includes('take-away') || n.includes('ซื้อกลับ') || n.includes('กลับบ้าน')) return '🥡';
+  if (n.includes('dine')     || n.includes('โต๊ะ')    || n.includes('นั่งทาน'))  return '🍽️';
+  return '🏷️';
 }
 
 function rowKey(r) {
