@@ -725,7 +725,9 @@ function groupByTable(rows) {
   const map = {};
   rows.forEach(r => {
     const smId = parseInt(r.SaleModeID, 10) || 0;
-    const k = `${r.TableID}_${smId}`;
+    // delivery orders มี TableID=0 ทั้งหมด → ใช้ DisplayTableName แยกบิล
+    const tblKey = parseInt(r.TableID, 10) || 0;
+    const k = tblKey !== 0 ? `${tblKey}_${smId}` : `__${r.DisplayTableName || ''}_${smId}`;
     if (!map[k]) map[k] = {
       tableId:    r.TableID,
       tableName:  r.DisplayTableName || String(r.TableID),
