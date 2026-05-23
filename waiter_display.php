@@ -725,14 +725,16 @@ function groupByTable(rows) {
   const map = {};
   rows.forEach(r => {
     const smId = parseInt(r.SaleModeID, 10) || 0;
-    // delivery orders มี TableID=0 ทั้งหมด → ใช้ DisplayTableName แยกบิล
     const tblKey = parseInt(r.TableID, 10) || 0;
-    const k = tblKey !== 0 ? `${tblKey}_${smId}` : `__${r.DisplayTableName || ''}_${smId}`;
+    const isDelivery = tblKey === 0;
+    // delivery orders (TableID=0) ใช้ TransactionID แยกบิล เพราะ unique ต่อออเดอร์
+    const k = !isDelivery ? `${tblKey}_${smId}` : `tx_${r.TransactionID || r.DisplayTableName || ''}`;
     if (!map[k]) map[k] = {
       tableId:    r.TableID,
       tableName:  r.DisplayTableName || String(r.TableID),
       queueName:  r.QueueName || '',
       saleModeId: smId,
+      isDelivery: isDelivery,
       earliest:   r.FinishDateTime || r.SubmitOrderDateTime || '',
       rows: []
     };
@@ -742,6 +744,7 @@ function groupByTable(rows) {
       map[k].earliest  = r.FinishDateTime;
     }
     if (!map[k].queueName && r.QueueName) map[k].queueName = r.QueueName;
+    if (!map[k].transactionId && r.TransactionID) map[k].transactionId = parseInt(r.TransactionID, 10) || 0;
     map[k].rows.push(r);
   });
   return Object.values(map).sort((a,b) => {
@@ -896,24 +899,34 @@ function buildCard(t, allowUnserve = false) {
     </div>`;
   }).join('');
 
+  const txId = t.transactionId || 0;
   let btn;
   if (allDone) {
     btn = allowUnserve
-      ? `<button class="srv-btn unserve-btn" onclick="tapUnserveAll(${t.tableId},'${esc(t.tableName)}')">↩️ ยกเลิกเสิร์ฟทั้งโต๊ะ ${esc(t.tableName)}</button>`
+      ? `<button class="srv-btn unserve-btn" onclick="tapUnserveAll(${t.tableId},${txId},'${esc(cardTitle)}')">↩️ ยกเลิกเสิร์ฟ ${esc(cardTitle)}</button>`
       : `<button class="srv-btn done-btn" disabled>✅ เสิร์ฟครบแล้ว</button>`;
   } else {
-    btn = `<button class="srv-btn" onclick="tapServeAll(${t.tableId})">
+    btn = `<button class="srv-btn" onclick="tapServeAll(${t.tableId},${txId})">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        เสิร์ฟครบโต๊ะ ${esc(t.tableName)}
+        เสิร์ฟครบ ${esc(cardTitle)}
       </button>`;
   }
+
+  const modeLabel = t.isDelivery
+    ? (saleModes[t.saleModeId] || `Mode ${t.saleModeId}`)
+    : 'โต๊ะ';
+  const cardTitle = t.isDelivery
+    ? (t.queueName || t.tableName)
+    : t.tableName;
+  const cardSub = t.isDelivery ? t.tableName : `โต๊ะ ${t.tableName}`;
 
   return `<div class="card ${cls}" data-table="${t.tableId}">
     <div class="c-hdr">
       <div class="tbl-badge">
-        <div class="tbl-num">${esc(t.tableName)}</div>
-        <div class="tbl-name">โต๊ะ ${esc(t.tableName)}</div>
-        ${t.queueName ? `<div class="queue-badge">🎫 ${esc(t.queueName)}</div>` : ''}
+        <div class="tbl-num">${esc(cardTitle)}</div>
+        <div class="tbl-name">${esc(modeLabel)} ${t.isDelivery ? '' : esc(t.tableName)}</div>
+        ${t.isDelivery && t.tableName !== cardTitle ? `<div class="queue-badge">🎫 ${esc(t.tableName)}</div>` : ''}
+        ${!t.isDelivery && t.queueName ? `<div class="queue-badge">🎫 ${esc(t.queueName)}</div>` : ''}
       </div>
       ${pill}
     </div>
@@ -1010,25 +1023,26 @@ async function tapItem(key) {
   }
 }
 
-async function tapServeAll(tableId) {
+async function tapServeAll(tableId, txId = 0) {
   if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
-  const lockKey = `table_${tableId}`;
+  const lockKey = `table_${tableId}_${txId}`;
   if (pending.has(lockKey)) return;
   pending.add(lockKey);
-  const t = tables.find(t => t.tableId == tableId);
+  const t = tables.find(t => t.tableId == tableId && (txId === 0 || t.transactionId == txId));
   if (!t) { pending.delete(lockKey); return; }
 
   // Optimistic
   t.rows.forEach(r => r.ServeStatus = 1);
   tables = groupByTable(rawRows);
   render();
-  toast(`✅ เสิร์ฟครบโต๊ะ ${t.tableName} แล้ว!`);
+  toast(`✅ เสิร์ฟครบ ${t.queueName || t.tableName} แล้ว!`);
 
   try {
     const fd = new FormData();
     fd.append('action',  'serve_table');
     fd.append('TableID', tableId);
     fd.append('StaffID', STAFF_ID);
+    if (txId > 0) fd.append('TransactionID', txId);
     const res  = await fetch(API, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
     const json = await res.json();
     if (!json.success) throw new Error(json.message);
@@ -1156,14 +1170,14 @@ async function confirmUnserve(key) {
   await tapItem(key);
 }
 
-async function tapUnserveAll(tableId, tableName) {
+async function tapUnserveAll(tableId, txId, displayName) {
   if (!STAFF_ID) { toast('⚠️ กรุณาล็อกอินก่อน', true); return; }
-  const ok = await showConfirm({ ico: '↩️', title: `ยกเลิกเสิร์ฟโต๊ะ ${tableName}?`, msg: 'รายการที่เสิร์ฟแล้วทั้งหมดจะถูกยกเลิก', confirmLabel: 'ยกเลิกเสิร์ฟทั้งโต๊ะ' });
+  const ok = await showConfirm({ ico: '↩️', title: `ยกเลิกเสิร์ฟ ${displayName}?`, msg: 'รายการที่เสิร์ฟแล้วทั้งหมดจะถูกยกเลิก', confirmLabel: 'ยกเลิกเสิร์ฟ' });
   if (!ok) return;
-  const lockKey = `untable_${tableId}`;
+  const lockKey = `untable_${tableId}_${txId}`;
   if (pending.has(lockKey)) return;
   pending.add(lockKey);
-  const t = tables.find(t => t.tableId == tableId);
+  const t = tables.find(t => t.tableId == tableId && (txId === 0 || t.transactionId == txId));
   if (!t) { pending.delete(lockKey); return; }
 
   t.rows.forEach(r => { r.ServeStatus = 0; });
@@ -1175,10 +1189,11 @@ async function tapUnserveAll(tableId, tableName) {
     fd.append('action',  'unserve_table');
     fd.append('TableID', tableId);
     fd.append('StaffID', STAFF_ID);
+    if (txId > 0) fd.append('TransactionID', txId);
     const res  = await fetch(API, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
     const json = await res.json();
     if (!json.success) throw new Error(json.message);
-    toast(`↩️ ยกเลิกเสิร์ฟโต๊ะ ${tableName} แล้ว`);
+    toast(`↩️ ยกเลิกเสิร์ฟ ${displayName} แล้ว`);
   } catch (e) {
     await loadData();
     toast('⚠️ บันทึกไม่สำเร็จ', true);

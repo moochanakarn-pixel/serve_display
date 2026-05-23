@@ -61,6 +61,7 @@ try {
                 o.ProductLevelID,
                 o.ProcessID,
                 o.SubProcessID,
+                o.TransactionID,
                 o.PrinterID,
                 o.TableID,
                 COALESCE(o.DisplayTableName, o.TableID) AS DisplayTableName,
@@ -196,20 +197,33 @@ try {
 
     } elseif ($action === 'serve_table') {
         $tableId = (int)($_POST['TableID'] ?? 0);
+        $txId    = (int)($_POST['TransactionID'] ?? 0);
         $staff   = (int)($_POST['StaffID'] ?? 0);
         if ($staff <= 0) {
             $conn->close();
             jsonResponse(['success' => false, 'message' => 'ต้องระบุ StaffID'], 400);
         }
 
-        $stmt = $conn->prepare("
-            UPDATE orderprocessdetailfront
-            SET ServingStaffID = ?, ServingDateTime = NOW()
-            WHERE TableID = ? AND ProcessStatus = 1
-              AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
-              AND ServingDateTime IS NULL
-        ");
-        $stmt->bind_param('ii', $staff, $tableId);
+        if ($txId > 0) {
+            // delivery order — filter ด้วย TransactionID ไม่ให้ serve ข้ามบิล
+            $stmt = $conn->prepare("
+                UPDATE orderprocessdetailfront
+                SET ServingStaffID = ?, ServingDateTime = NOW()
+                WHERE TableID = ? AND TransactionID = ? AND ProcessStatus = 1
+                  AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
+                  AND ServingDateTime IS NULL
+            ");
+            $stmt->bind_param('iii', $staff, $tableId, $txId);
+        } else {
+            $stmt = $conn->prepare("
+                UPDATE orderprocessdetailfront
+                SET ServingStaffID = ?, ServingDateTime = NOW()
+                WHERE TableID = ? AND ProcessStatus = 1
+                  AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
+                  AND ServingDateTime IS NULL
+            ");
+            $stmt->bind_param('ii', $staff, $tableId);
+        }
         if (!$stmt->execute()) throw new Exception($stmt->error);
         $stmt->close();
         $conn->close();
@@ -217,20 +231,32 @@ try {
 
     } elseif ($action === 'unserve_table') {
         $tableId = (int)($_POST['TableID'] ?? 0);
+        $txId    = (int)($_POST['TransactionID'] ?? 0);
         $staff   = (int)($_POST['StaffID'] ?? 0);
         if ($staff <= 0) {
             $conn->close();
             jsonResponse(['success' => false, 'message' => 'ต้องระบุ StaffID'], 400);
         }
 
-        $stmt = $conn->prepare("
-            UPDATE orderprocessdetailfront
-            SET ServingStaffID = 0, ServingDateTime = NULL
-            WHERE TableID = ? AND ProcessStatus = 1
-              AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
-              AND ServingDateTime IS NOT NULL
-        ");
-        $stmt->bind_param('i', $tableId);
+        if ($txId > 0) {
+            $stmt = $conn->prepare("
+                UPDATE orderprocessdetailfront
+                SET ServingStaffID = 0, ServingDateTime = NULL
+                WHERE TableID = ? AND TransactionID = ? AND ProcessStatus = 1
+                  AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
+                  AND ServingDateTime IS NOT NULL
+            ");
+            $stmt->bind_param('ii', $tableId, $txId);
+        } else {
+            $stmt = $conn->prepare("
+                UPDATE orderprocessdetailfront
+                SET ServingStaffID = 0, ServingDateTime = NULL
+                WHERE TableID = ? AND ProcessStatus = 1
+                  AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
+                  AND ServingDateTime IS NOT NULL
+            ");
+            $stmt->bind_param('i', $tableId);
+        }
         if (!$stmt->execute()) throw new Exception($stmt->error);
         $stmt->close();
         $conn->close();
