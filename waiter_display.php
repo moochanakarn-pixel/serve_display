@@ -776,7 +776,7 @@ function render() {
   // kitchen tab — read-only
   if (filter === 'kitchen') {
     const filteredCookRows = allowedPrinters.size
-      ? cookingRows.filter(r => allowedPrinters.has(parseInt(r.PrinterID, 10)))
+      ? cookingRows.filter(r => { const pid = parseInt(r.PrinterID, 10); return pid === -1 || allowedPrinters.has(pid); })
       : cookingRows;
     let kTables = groupByTable(filteredCookRows);
     if (search) {
@@ -1144,7 +1144,7 @@ function renderChips() {
   let src;
   if (filter === 'kitchen') {
     const filteredCook = allowedPrinters.size
-      ? cookingRows.filter(r => allowedPrinters.has(parseInt(r.PrinterID, 10)))
+      ? cookingRows.filter(r => { const pid = parseInt(r.PrinterID, 10); return pid === -1 || allowedPrinters.has(pid); })
       : cookingRows;
     src = groupByTable(filteredCook).map(t => ({ ...t, _kitchen: true }));
   } else if (filter === 'done') {
