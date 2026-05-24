@@ -775,7 +775,10 @@ function render() {
 
   // kitchen tab — read-only
   if (filter === 'kitchen') {
-    let kTables = groupByTable(cookingRows);
+    const filteredCookRows = allowedPrinters.size
+      ? cookingRows.filter(r => allowedPrinters.has(parseInt(r.PrinterID, 10)))
+      : cookingRows;
+    let kTables = groupByTable(filteredCookRows);
     if (search) {
       const q = search.toLowerCase();
       kTables = kTables.filter(t => String(t.tableName).toLowerCase().includes(q) || String(t.tableId).includes(q));
@@ -924,7 +927,8 @@ function buildCard(t, allowUnserve = false) {
   }
 
 
-  return `<div class="card ${cls}" data-table="${t.tableId}">
+  const cardKey = t.isDelivery ? 'd_' + t.tableName : String(t.tableId);
+  return `<div class="card ${cls}" data-table="${esc(cardKey)}">
     <div class="c-hdr">
       <div class="tbl-badge">
         <div class="tbl-num">${esc(cardTitle)}</div>
@@ -1008,7 +1012,8 @@ async function tapItem(key) {
       const hdr = rawRows.find(h => h.ProcessID == r.ParentProcessID && h.ProductSetType == 7);
       if (hdr && hdr.ServeStatus != 1) {
         const siblings = rawRows.filter(s => parseInt(s.ProductSetType) < 0 && s.ParentProcessID == hdr.ProcessID);
-        if (siblings.every(s => s.ServeStatus == 1)) {
+        const siblingsInKitchen = cookingRows.filter(c => parseInt(c.ParentProcessID) == parseInt(hdr.ProcessID));
+        if (siblings.every(s => s.ServeStatus == 1) && siblingsInKitchen.length === 0) {
           hdr.ServeStatus      = 1;
           hdr.ServingStaffName = STAFF_NAME;
           tables = groupByTable(rawRows);
@@ -1091,7 +1096,8 @@ function buildKitchenCard(t) {
     </div>`;
   }).join('');
 
-  return `<div class="card" style="border-color:#fed7aa;box-shadow:0 0 0 2px rgba(194,65,12,.08),var(--shadow)" data-table="${t.tableId}">
+  const ckKey = t.isDelivery ? 'd_' + t.tableName : String(t.tableId);
+  return `<div class="card" style="border-color:#fed7aa;box-shadow:0 0 0 2px rgba(194,65,12,.08),var(--shadow)" data-table="${esc(ckKey)}">
     <div class="c-hdr">
       <div class="tbl-badge">
         <div class="tbl-num">${esc(t.tableName)}</div>
@@ -1137,7 +1143,10 @@ function renderChips() {
 
   let src;
   if (filter === 'kitchen') {
-    src = groupByTable(cookingRows).map(t => ({ ...t, _kitchen: true }));
+    const filteredCook = allowedPrinters.size
+      ? cookingRows.filter(r => allowedPrinters.has(parseInt(r.PrinterID, 10)))
+      : cookingRows;
+    src = groupByTable(filteredCook).map(t => ({ ...t, _kitchen: true }));
   } else if (filter === 'done') {
     src = tables.filter(t => t.rows.some(r => r.ServeStatus == 1));
   } else {
@@ -1149,15 +1158,14 @@ function renderChips() {
       t.rows.every(r => r.ServeStatus == 1) ? 't-done' :
       t.rows.some(r  => r.ServeStatus == 1) ? 't-part' : 't-wait'
     );
-    return `<button class="tchip ${cls}" onclick="jumpToTable(${t.tableId})">${esc(t.tableName)}</button>`;
+    const ck = t.isDelivery ? 'd_' + t.tableName : String(t.tableId);
+    return `<button class="tchip ${cls}" onclick="jumpToCard('${esc(ck)}')">${esc(t.tableName)}</button>`;
   }).join('');
 }
-function jumpToTable(tableId) {
-  // ถ้า search อยู่ให้ clear ก่อน แล้วจึงเลื่อน
+function jumpToCard(ck) {
   if (search) clearSearch();
-  // หา card ด้วย data-table attribute หรือหา card ที่มี button ของ tableId นั้น
   setTimeout(() => {
-    const card = document.querySelector(`#main .card[data-table="${tableId}"]`);
+    const card = document.querySelector(`#main .card[data-table="${ck}"]`);
     if (!card) return;
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     card.style.outline = '2.5px solid var(--primary)';

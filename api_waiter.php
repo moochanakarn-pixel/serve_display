@@ -83,7 +83,7 @@ try {
             LEFT JOIN staffs s ON s.StaffID = o.ServingStaffID AND o.ServingStaffID > 0
             LEFT JOIN ordertransactionfront tr ON tr.TransactionID = o.TransactionID AND tr.ComputerID = o.ComputerID
             LEFT JOIN orderdetailfront od ON od.ProcessID = o.ProcessID AND od.ProcessID > 0
-            WHERE o.ProcessStatus = 1
+            WHERE o.ProcessStatus IN (1, 4)
               AND COALESCE(o.FinishDateTime, o.SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
             ORDER BY o.FinishDateTime ASC
         ";
@@ -97,7 +97,7 @@ try {
 
         // ดึงรายละเอียดรายการที่ยังอยู่ในครัว (ProcessStatus 0=รอทำ, 2=กำลังทำ)
         $cookSql = "
-            SELECT TableID, ProcessID,
+            SELECT TableID, ProcessID, PrinterID,
                    COALESCE(DisplayTableName, TableID) AS DisplayTableName,
                    ProductName, ProductAmount, ProductSetType, ParentProcessID,
                    ProcessStatus, SubmitOrderDateTime
@@ -163,7 +163,7 @@ try {
             UPDATE orderprocessdetailfront
             SET ServingStaffID = ?, ServingDateTime = NOW()
             WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ? AND TableID = ?
-              AND ProcessStatus = 1
+              AND ProcessStatus IN (1, 4)
               AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
               AND ServingDateTime IS NULL
         ");
@@ -189,7 +189,7 @@ try {
             UPDATE orderprocessdetailfront
             SET ServingStaffID = 0, ServingDateTime = NULL
             WHERE ProductLevelID = ? AND ProcessID = ? AND SubProcessID = ? AND PrinterID = ? AND TableID = ?
-              AND ProcessStatus = 1
+              AND ProcessStatus IN (1, 4)
               AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
         ");
         $stmt->bind_param('iiiii', $plid, $pid, $spid, $prid, $tbl);
@@ -212,7 +212,7 @@ try {
             $stmt = $conn->prepare("
                 UPDATE orderprocessdetailfront
                 SET ServingStaffID = ?, ServingDateTime = NOW()
-                WHERE TableID = ? AND TransactionID = ? AND ProcessStatus = 1
+                WHERE TableID = ? AND TransactionID = ? AND ProcessStatus IN (1, 4)
                   AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
                   AND ServingDateTime IS NULL
             ");
@@ -221,7 +221,7 @@ try {
             $stmt = $conn->prepare("
                 UPDATE orderprocessdetailfront
                 SET ServingStaffID = ?, ServingDateTime = NOW()
-                WHERE TableID = ? AND ProcessStatus = 1
+                WHERE TableID = ? AND ProcessStatus IN (1, 4)
                   AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
                   AND ServingDateTime IS NULL
             ");
@@ -245,7 +245,7 @@ try {
             $stmt = $conn->prepare("
                 UPDATE orderprocessdetailfront
                 SET ServingStaffID = 0, ServingDateTime = NULL
-                WHERE TableID = ? AND TransactionID = ? AND ProcessStatus = 1
+                WHERE TableID = ? AND TransactionID = ? AND ProcessStatus IN (1, 4)
                   AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
                   AND ServingDateTime IS NOT NULL
             ");
@@ -254,7 +254,7 @@ try {
             $stmt = $conn->prepare("
                 UPDATE orderprocessdetailfront
                 SET ServingStaffID = 0, ServingDateTime = NULL
-                WHERE TableID = ? AND ProcessStatus = 1
+                WHERE TableID = ? AND ProcessStatus IN (1, 4)
                   AND COALESCE(FinishDateTime, SubmitOrderDateTime) >= NOW() - INTERVAL 24 HOUR
                   AND ServingDateTime IS NOT NULL
             ");
