@@ -173,6 +173,8 @@ function getDbConnection()
         throw new Exception('Unable to set charset utf8');
     }
 
+    $conn->query("SET time_zone = '+07:00'");
+
     return $conn;
 }
 
