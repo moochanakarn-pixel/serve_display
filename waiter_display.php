@@ -703,13 +703,6 @@ async function loadData() {
     cookingRows  = json.cooking_rows || [];
     tables       = groupByTable(rawRows);
 
-    console.log(
-      `[serve] rows=${rawRows.length}`,
-      `printers=[${[...allowedPrinters].join(',')||'ไม่ได้ config'}]`,
-      `nonKds=${rawRows.filter(r=>r._nonKds).length}`,
-      `wait=${rawRows.filter(r=>r.ServeStatus==0).length}`,
-      `done=${rawRows.filter(r=>r.ServeStatus==1).length}`
-    );
     hideError();
 
   } catch (e) {
@@ -1673,6 +1666,9 @@ document.getElementById('settingsModal').addEventListener('click', e => {
 applyBarcodeEnabled();
 document.getElementById('loginInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && STAFF_ID) loadData();
 });
 initAuth();
 </script>
