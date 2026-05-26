@@ -4,6 +4,15 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/auth_check.php';
+session_write_close();
+
+set_exception_handler(function ($e) {
+    while (ob_get_level()) ob_end_clean();
+    http_response_code(200);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+});
 
 $action = isset($_REQUEST['action']) ? trim((string)$_REQUEST['action']) : '';
 
