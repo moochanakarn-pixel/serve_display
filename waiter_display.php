@@ -1405,6 +1405,7 @@ document.addEventListener('keydown', e => {
   if (!barcodeEnabled) return;
   if (document.getElementById('settingsModal').classList.contains('show')) return;
   if (document.getElementById('confirmModal').classList.contains('show')) return;
+  if (!document.getElementById('loginOverlay').classList.contains('hidden')) return;
   const tag = document.activeElement?.tagName;
   if (['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
 
